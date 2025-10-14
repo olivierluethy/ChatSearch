@@ -3,6 +3,9 @@
   const STORAGE_KEY = "aiSidebarWidth";
   const CHAT_FEED_ID = "chat-feed";
   const CHAT_HISTORY_KEY = "chatHistory";
+const ACTIVE_THREAD_KEY = "activeThreadId";     // neu: aktuell ausgewählter Thread
+const CHAT_THREADS_KEY = "chatThreads";         // neu: Liste der Threads
+
 
   // Create and manage the UI
   function createUI(targetDiv) {
@@ -119,6 +122,30 @@
         <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🟢 Gemini (Gemini 2.5 Flash-Lite)</li>
         <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🟢 Grok (Grok 3 Mini)</li>
       </ul>
+      <!-- Neu: Chat-Thread Liste -->
+  <div style="margin-bottom: 15px;">
+    <h4 style="font-size: 1rem; margin-bottom: 10px;">Chat Threads</h4>
+    <div id="chat-thread-list" style="
+      max-height: 120px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      padding: 5px;
+    "></div>
+    <button id="new-thread-btn" style="
+      padding: 6px 10px;
+      width: 100%;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-top: 5px;
+    ">➕ New Chat</button>
+  </div>
       <button id="clear-history" style="
         margin-top: 20px;
         padding: 10px;
@@ -145,8 +172,129 @@
       });
     });
 
+    // Thread-Liste initial laden
+loadThreads();
+
+// Neuer Thread Button
+const newThreadBtn = sidebar.querySelector("#new-thread-btn");
+newThreadBtn.addEventListener("click", createNewThread);
+
+
     return sidebar;
   }
+
+  // ==========================
+// 🧠 Chat Thread Management
+// ==========================
+
+// Lade alle Threads und rendere sie in der Sidebar
+function loadThreads() {
+  const list = document.getElementById("chat-thread-list");
+  if (!list) return;
+
+  chrome.storage.local.get([CHAT_THREADS_KEY, ACTIVE_THREAD_KEY], (res) => {
+    const threads = res[CHAT_THREADS_KEY] || [];
+    const activeId = res[ACTIVE_THREAD_KEY];
+    list.innerHTML = "";
+
+    threads.forEach(thread => {
+      const item = document.createElement("div");
+      item.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        background: ${thread.id === activeId ? "#e0e7ff" : "transparent"};
+        margin-bottom: 4px;
+      `;
+      const title = document.createElement("span");
+      title.innerText = thread.title;
+      title.contentEditable = false;
+      title.style.flex = "1";
+
+      // Bearbeiten beim Doppelklick
+      title.addEventListener("dblclick", () => {
+        title.contentEditable = true;
+        title.focus();
+      });
+
+      title.addEventListener("blur", () => {
+        title.contentEditable = false;
+        thread.title = title.innerText.trim() || "Untitled";
+        chrome.storage.local.set({ [CHAT_THREADS_KEY]: threads }, loadThreads);
+      });
+
+      // Löschen
+      const delBtn = document.createElement("button");
+      delBtn.innerText = "🗑️";
+      delBtn.style.cssText = `
+        background: transparent;
+        border: none;
+        cursor: pointer;
+      `;
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const updated = threads.filter(t => t.id !== thread.id);
+        chrome.storage.local.set({ [CHAT_THREADS_KEY]: updated }, () => {
+          chrome.storage.local.remove(`messages_${thread.id}`);
+          loadThreads();
+        });
+      });
+
+      // Klick -> Thread aktivieren
+      item.addEventListener("click", () => {
+        chrome.storage.local.set({ [ACTIVE_THREAD_KEY]: thread.id }, () => {
+          loadThreads();
+          reloadActiveThreadMessages();
+        });
+      });
+
+      item.append(title, delBtn);
+      list.appendChild(item);
+    });
+  });
+}
+
+// Neuer Thread
+function createNewThread() {
+  const id = `thread_${Date.now()}`;
+  const newThread = { id, title: `Chat ${new Date().toLocaleString()}` };
+
+  chrome.storage.local.get([CHAT_THREADS_KEY], (res) => {
+    const threads = res[CHAT_THREADS_KEY] || [];
+    threads.unshift(newThread);
+    chrome.storage.local.set(
+      { [CHAT_THREADS_KEY]: threads, [ACTIVE_THREAD_KEY]: id },
+      () => {
+        chrome.storage.local.set({ [`messages_${id}`]: [] }, loadThreads);
+      }
+    );
+  });
+}
+
+// Nachrichten des aktiven Threads neu laden
+function reloadActiveThreadMessages() {
+  chrome.storage.local.get([ACTIVE_THREAD_KEY], (res) => {
+    const threadId = res[ACTIVE_THREAD_KEY];
+    const chatFeed = document.getElementById(CHAT_FEED_ID);
+    if (!chatFeed) return;
+    chatFeed.innerHTML = "";
+
+    if (!threadId) return;
+
+    chrome.storage.local.get([`messages_${threadId}`], (result) => {
+      const messages = (result[`messages_${threadId}`] || []).sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      );
+      messages.forEach((msg) =>
+        addMessage(chatFeed, msg.text, msg.sender, msg.timestamp)
+      );
+    });
+  });
+}
+
 
   // Create resizer for sidebar
   function createResizer(sidebar) {
@@ -259,21 +407,32 @@
 
   // Save a message to chrome.storage.local
   function saveMessage(text, sender, timestamp) {
-    chrome.storage.local.get([CHAT_HISTORY_KEY], (result) => {
-      const messages = result[CHAT_HISTORY_KEY] || [];
+  chrome.storage.local.get([ACTIVE_THREAD_KEY], (res) => {
+    const threadId = res[ACTIVE_THREAD_KEY];
+    if (!threadId) return;
+
+    const storageKey = `messages_${threadId}`;
+    chrome.storage.local.get([storageKey], (result) => {
+      const messages = result[storageKey] || [];
       messages.push({ text, sender, timestamp });
-      chrome.storage.local.set({ [CHAT_HISTORY_KEY]: messages });
+      messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      chrome.storage.local.set({ [storageKey]: messages });
     });
-  }
+  });
+}
+
 
   // Clear chat history from chrome.storage.local and chat feed
   function clearChatHistory(chatFeed) {
-    chrome.storage.local.set({ [CHAT_HISTORY_KEY]: [] }, () => {
-      chatFeed.innerHTML = ""; // Clear the chat feed
+  chrome.storage.local.get([ACTIVE_THREAD_KEY], (res) => {
+    const threadId = res[ACTIVE_THREAD_KEY];
+    if (!threadId) return;
+    chrome.storage.local.set({ [`messages_${threadId}`]: [] }, () => {
+      chatFeed.innerHTML = "";
     });
-  }
+  });
+}
 
-  // Initialize chat functionality
   // Initialize chat functionality
 function initializeChat(mainContent, googleSearchInput) {
   const input = mainContent.querySelector("input");
@@ -281,8 +440,15 @@ function initializeChat(mainContent, googleSearchInput) {
   const chatFeed = mainContent.querySelector(`#${CHAT_FEED_ID}`);
   const clearHistoryButton = document.querySelector("#clear-history");
 
-  // Load chat history
-  loadChatHistory(chatFeed);
+  // Aktiven Thread laden oder neuen erstellen, wenn keiner existiert
+chrome.storage.local.get([ACTIVE_THREAD_KEY, CHAT_THREADS_KEY], (res) => {
+  if (!res[CHAT_THREADS_KEY] || res[CHAT_THREADS_KEY].length === 0) {
+    createNewThread();
+  } else {
+    reloadActiveThreadMessages();
+  }
+});
+
 
   // Handle message submission
   async function handleMessageSubmission(message) {
