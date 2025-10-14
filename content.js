@@ -18,18 +18,18 @@
     const uiContainer = document.createElement("div");
     uiContainer.id = CONTAINER_ID;
     uiContainer.style.cssText = `
-      display: flex;
-      width: 80%;
-      max-width: 1200px;
-      margin: 2em auto;
-      border-radius: 16px;
-      box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-      -webkit-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-      -moz-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      background-color: #ffffff;
-    `;
+  display: flex;
+  width: 60%;
+  max-width: 800px;
+  margin: 1.5em auto;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+  z-index: 9999;
+`;
 
     // Sidebar
     const sidebar = createSidebar(sidebarWidth);
@@ -46,15 +46,23 @@
     toggleButton.title = "Minimize/Maximize";
     toggleButton.style.cssText = `
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 6px;
+  right: 6px;
   z-index: 1000;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
+  background: #ffffffcc;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
   cursor: pointer;
-  transition: transform 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.3s, background 0.3s;
 `;
+
 
     let isMinimized = false;
     let originalWidth = uiContainer.style.width;
@@ -62,25 +70,26 @@
     let originalMargin = uiContainer.style.margin;
 
     toggleButton.addEventListener("click", () => {
-      if (!isMinimized) {
-        // Save current size before minimizing
-        originalWidth = uiContainer.style.width;
-        originalHeight = uiContainer.style.height;
-        originalMargin = uiContainer.style.margin;
+  if (!isMinimized) {
+    originalWidth = uiContainer.style.width;
+    originalHeight = uiContainer.style.height;
+    originalMargin = uiContainer.style.margin;
 
-        uiContainer.style.width = "60%";
-        uiContainer.style.height = "40vh";
-        uiContainer.style.margin = "2rem";
-        toggleButton.innerText = "🔼";
-      } else {
-        // Restore original size
-        uiContainer.style.width = originalWidth;
-        uiContainer.style.height = originalHeight;
-        uiContainer.style.margin = originalMargin;
-        toggleButton.innerText = "🔽";
-      }
-      isMinimized = !isMinimized;
-    });
+    uiContainer.style.width = "320px";
+    uiContainer.style.height = "60px";
+    uiContainer.style.margin = "1rem auto";
+    uiContainer.style.overflow = "hidden";
+    toggleButton.innerText = "🔼";
+  } else {
+    uiContainer.style.width = originalWidth;
+    uiContainer.style.height = originalHeight;
+    uiContainer.style.margin = originalMargin;
+    uiContainer.style.overflow = "visible";
+    toggleButton.innerText = "🔽";
+  }
+  isMinimized = !isMinimized;
+});
+
 
     // Container needs relative positioning for absolute button
     uiContainer.style.position = "relative";
@@ -198,16 +207,20 @@
     mainContent.innerHTML = `
       <h2 style="margin: 0 0 20px; font-size: 1.5rem; font-weight: 600; color: #333;">Talk to AI</h2>
       <div id="${CHAT_FEED_ID}" style="
-        flex: 1;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        scroll-behavior: smooth;
-        max-height: min(400px, 50vh);
-      "></div>
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  max-height: 250px;
+  border-radius: 8px;
+  background-color: #fafafa;
+  border: 1px solid #ddd;
+"></div>
+
       <div style="display: flex; gap: 10px; align-items: center;">
         <input type="text" placeholder="Type your message here..." style="
           flex: 1;
