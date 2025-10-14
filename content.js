@@ -261,83 +261,113 @@
   }
 
   // Initialize chat functionality
-  function initializeChat(mainContent, googleSearchInput) {
-    const input = mainContent.querySelector("input");
-    const sendButton = mainContent.querySelector("button");
-    const chatFeed = mainContent.querySelector(`#${CHAT_FEED_ID}`);
-    const clearHistoryButton = document.querySelector("#clear-history");
+  // Initialize chat functionality
+function initializeChat(mainContent, googleSearchInput) {
+  const input = mainContent.querySelector("input");
+  const sendButton = mainContent.querySelector("button");
+  const chatFeed = mainContent.querySelector(`#${CHAT_FEED_ID}`);
+  const clearHistoryButton = document.querySelector("#clear-history");
 
-    // Load chat history
-    loadChatHistory(chatFeed);
+  // Load chat history
+  loadChatHistory(chatFeed);
 
-    // Handle message submission
-    function handleMessageSubmission(message) {
-      if (!message) return;
+  // Handle message submission
+  async function handleMessageSubmission(message) {
+    if (!message) return;
 
-      const timestamp = new Date().toISOString(); // Store ISO timestamp for consistency
-      // Add user message
-      addMessage(chatFeed, message, "user", timestamp);
-      // Save user message
-      saveMessage(message, "user", timestamp);
-      // Add and save placeholder AI response
-      setTimeout(() => {
-        const aiTimestamp = new Date().toISOString();
-        addMessage(chatFeed, "Hello World", "ai", aiTimestamp);
-        saveMessage("Hello World", "ai", aiTimestamp);
-      }, 500);
-      input.value = "";
-      input.focus();
-    }
+    const timestamp = new Date().toISOString();
+    // Add user message locally
+    addMessage(chatFeed, message, "user", timestamp);
+    saveMessage(message, "user", timestamp);
+    input.value = "";
+    input.focus();
 
-    // Auto-submit textarea value if available
-    if (googleSearchInput && googleSearchInput.value.trim()) {
-      handleMessageSubmission(googleSearchInput.value.trim());
-    }
+    // Prepare payload for API call
+    const payload = {
+      model: "gpt-3.5-turbo",  // oder "gpt-4o-mini" wenn verfügbar
+      messages: [
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+    };
 
-    // Submit on Enter key
-    input.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        const message = input.value.trim();
-        handleMessageSubmission(message);
+    try {
+      // Call your backend API
+      const res = await fetch("http://127.0.0.1:8000/api/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.statusText}`);
       }
-    });
 
-    // Submit on Send button click
-    sendButton.addEventListener("click", () => {
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Add AI response to chat and save it
+      const aiMessage = data.response || "Keine Antwort erhalten.";
+      const aiTimestamp = new Date().toISOString();
+      addMessage(chatFeed, aiMessage, "ai", aiTimestamp);
+      saveMessage(aiMessage, "ai", aiTimestamp);
+
+    } catch (error) {
+      const errorTimestamp = new Date().toISOString();
+      addMessage(chatFeed, `Error: ${error.message}`, "ai", errorTimestamp);
+      saveMessage(`Error: ${error.message}`, "ai", errorTimestamp);
+    }
+  }
+
+  // Auto-submit textarea value if available
+  if (googleSearchInput && googleSearchInput.value.trim()) {
+    handleMessageSubmission(googleSearchInput.value.trim());
+  }
+
+  // Submit on Enter key
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
       const message = input.value.trim();
       handleMessageSubmission(message);
-    });
-
-    // Clear history button
-    if (clearHistoryButton) {
-      clearHistoryButton.addEventListener("click", () =>
-        clearChatHistory(chatFeed)
-      );
-      clearHistoryButton.addEventListener(
-        "mouseover",
-        () => (clearHistoryButton.style.backgroundColor = "#e6393d")
-      );
-      clearHistoryButton.addEventListener(
-        "mouseout",
-        () => (clearHistoryButton.style.backgroundColor = "#ff4d4f")
-      );
     }
+  });
 
-    // Style input and button interactions
-    input.addEventListener(
-      "focus",
-      () => (input.style.borderColor = "#25D366")
+  // Submit on Send button click
+  sendButton.addEventListener("click", () => {
+    const message = input.value.trim();
+    handleMessageSubmission(message);
+  });
+
+  // Clear history button
+  if (clearHistoryButton) {
+    clearHistoryButton.addEventListener("click", () =>
+      clearChatHistory(chatFeed)
     );
-    input.addEventListener("blur", () => (input.style.borderColor = "#ccc"));
-    sendButton.addEventListener(
+    clearHistoryButton.addEventListener(
       "mouseover",
-      () => (sendButton.style.backgroundColor = "#20b058")
+      () => (clearHistoryButton.style.backgroundColor = "#e6393d")
     );
-    sendButton.addEventListener(
+    clearHistoryButton.addEventListener(
       "mouseout",
-      () => (sendButton.style.backgroundColor = "#25D366")
+      () => (clearHistoryButton.style.backgroundColor = "#ff4d4f")
     );
   }
+
+  // Style input and button interactions
+  input.addEventListener("focus", () => (input.style.borderColor = "#25D366"));
+  input.addEventListener("blur", () => (input.style.borderColor = "#ccc"));
+  sendButton.addEventListener("mouseover", () => (sendButton.style.backgroundColor = "#20b058"));
+  sendButton.addEventListener("mouseout", () => (sendButton.style.backgroundColor = "#25D366"));
+}
+
 
   // Add message to chat feed
   function addMessage(chatFeed, text, sender, timestamp) {

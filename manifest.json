@@ -5,7 +5,8 @@
   "description": "Injects a custom AI UI box into Google search page.",
   "permissions": ["storage"],
   "host_permissions": [
-    "https://www.google.com/*"
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
   ],
   "content_scripts": [
     {
@@ -399,5 +400,8 @@
       "js": ["content.js"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
 }
