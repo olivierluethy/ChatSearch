@@ -22,7 +22,9 @@
       max-width: 1200px;
       margin: 2em auto;
       border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+      -webkit-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+      -moz-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow: hidden;
       background-color: #ffffff;
@@ -59,10 +61,9 @@
     sidebar.innerHTML = `
       <h3 style="margin: 0 0 20px; font-size: 1.2rem; font-weight: 600; color: #333;">AI Models</h3>
       <ul style="list-style: none; padding: 0; margin: 0; color: black;">
-        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item active">🔹 GPT-4</li>
-        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🔸 Claude 2</li>
-        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🟢 Gemini</li>
-        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">⚙️ Custom Model</li>
+        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item active">🔹 GPT-4 (GPT-4o Mini)</li>
+        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🟢 Gemini (Gemini 2.5 Flash-Lite)</li>
+        <li style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;" class="model-item">🟢 Grok (Grok 3 Mini)</li>
       </ul>
     `;
 
@@ -132,14 +133,18 @@
     mainContent.innerHTML = `
       <h2 style="margin: 0 0 20px; font-size: 1.5rem; font-weight: 600; color: #333;">Talk to AI</h2>
       <div id="${CHAT_FEED_ID}" style="
-        flex: 1;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      "></div>
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px; /* Begrenze die sichtbare Höhe */
+  margin-bottom: 20px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  max-height: min(400px, 50vh);
+"></div>
+
       <div style="display: flex; gap: 10px; align-items: center;">
         <input type="text" placeholder="Type your message here..." style="
           flex: 1;
