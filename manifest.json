@@ -3,7 +3,7 @@
   "name": "Google AI Box Injector",
   "version": "1.0",
   "description": "Injects a custom AI UI box into Google search page.",
-  "permissions": [],
+  "permissions": ["storage"],
   "host_permissions": [
     "https://www.google.com/*"
   ],
