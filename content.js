@@ -1,10 +1,13 @@
 (function () {
   const CONTAINER_ID = "custom-ai-box";
   let activeThreadId = null;
+  let autoScrollEnabled = true; // 🆕 Autoscroll-Zustand global
 
   function formatDate(ts) {
     const d = new Date(ts);
-    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+    return `${d.getFullYear()}-${(d.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${d
       .getDate()
       .toString()
       .padStart(2, "0")} ${d.getHours().toString().padStart(2, "0")}:${d
@@ -76,36 +79,36 @@
   }
 
   async function saveMessageToActiveThread(text, role = "user") {
-  if (!text.trim()) return;
-  let threads = await getThreads();
-  if (!activeThreadId) {
-    await createNewThread();
-    threads = await getThreads();
+    if (!text.trim()) return;
+    let threads = await getThreads();
+    if (!activeThreadId) {
+      await createNewThread();
+      threads = await getThreads();
+    }
+    const thread = threads.find((t) => t.id === activeThreadId);
+    if (!thread) return;
+    thread.messages.push({
+      id: "msg_" + Date.now(),
+      text: text.trim(),
+      timestamp: Date.now(),
+      role,
+    });
+    await saveThreads(threads);
+    renderMessages(thread.messages);
   }
-  const thread = threads.find((t) => t.id === activeThreadId);
-  if (!thread) return;
-  thread.messages.push({
-    id: "msg_" + Date.now(),
-    text: text.trim(),
-    timestamp: Date.now(),
-    role, // 👈 Wichtig!
-  });
-  await saveThreads(threads);
-  renderMessages(thread.messages);
-}
 
-async function maybeAutoRespond() {
-  const threads = await getThreads();
-  const thread = threads.find((t) => t.id === activeThreadId);
-  if (!thread || thread.messages.length === 0) return;
+  async function maybeAutoRespond() {
+    const threads = await getThreads();
+    const thread = threads.find((t) => t.id === activeThreadId);
+    if (!thread || thread.messages.length === 0) return;
 
-  const lastMsg = thread.messages[thread.messages.length - 1];
-  
-  if (lastMsg.role === "user") {
-    const response = await sendToApi(lastMsg.text);
-    await saveMessageToActiveThread(response, "ai");
+    const lastMsg = thread.messages[thread.messages.length - 1];
+
+    if (lastMsg.role === "user") {
+      const response = await sendToApi(lastMsg.text);
+      await saveMessageToActiveThread(response, "ai");
+    }
   }
-}
 
   async function clearAllThreads() {
     await saveThreads([]);
@@ -141,7 +144,8 @@ async function maybeAutoRespond() {
         `;
 
         const title = document.createElement("strong");
-        title.style = "font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+        title.style =
+          "font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
         title.textContent = thread.name;
 
         const time = document.createElement("span");
@@ -153,7 +157,6 @@ async function maybeAutoRespond() {
         titleWrapper.appendChild(title);
         titleWrapper.appendChild(time);
 
-        // ✏️ Edit-Button
         const editBtn = document.createElement("button");
         editBtn.innerHTML = "✏️";
         editBtn.style = `
@@ -165,7 +168,6 @@ async function maybeAutoRespond() {
         `;
         editBtn.title = "Edit Thread";
 
-        // 🗑 Delete-Button
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
         delBtn.style = `
@@ -173,6 +175,7 @@ async function maybeAutoRespond() {
           background:none;
           cursor:pointer;
           font-size:14px;
+          color: red;
           margin-left:8px;
         `;
         delBtn.title = "Delete Thread";
@@ -183,7 +186,6 @@ async function maybeAutoRespond() {
           }
         });
 
-        // ✅ Speichern-Button (nur bei Bearbeitung)
         const saveBtn = document.createElement("button");
         saveBtn.textContent = "✅";
         saveBtn.style = `
@@ -196,14 +198,12 @@ async function maybeAutoRespond() {
         `;
         saveBtn.title = "Änderung speichern";
 
-        // 📌 Aktivieren
         div.addEventListener("click", async () => {
           setActiveThreadId(thread.id);
           renderThreadList(await getThreads());
           renderMessages(thread.messages);
         });
 
-        // Bearbeiten-Logik
         editBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           const input = document.createElement("input");
@@ -261,7 +261,12 @@ async function maybeAutoRespond() {
       `;
       area.appendChild(div);
     });
-    area.scrollTop = area.scrollHeight;
+
+    requestAnimationFrame(() => {
+      if (autoScrollEnabled) {
+        area.scrollTop = area.scrollHeight;
+      }
+    });
   }
 
   function escapeHtml(str) {
@@ -274,42 +279,42 @@ async function maybeAutoRespond() {
   }
 
   async function sendToApi(text) {
-  const payload = {
-    model: "gpt-3.5-turbo",  // Oder "gpt-4o-mini" wenn dein Backend das supportet
-    messages: [
-      {
-        role: "user",
-        content: text,
-      },
-    ],
-  };
+    const payload = {
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "user",
+          content: text,
+        },
+      ],
+    };
 
-  try {
-    const res = await fetch("http://127.0.0.1:8000/api/change-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (!res.ok) {
-      throw new Error(`API error: ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return data.response || "Keine Antwort erhalten.";
+    } catch (error) {
+      console.error("API Error:", error);
+      return `Error: ${error.message}`;
     }
-
-    const data = await res.json();
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    return data.response || "Keine Antwort erhalten.";
-  } catch (error) {
-    console.error("API Error:", error);
-    return `Error: ${error.message}`;
   }
-}
 
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
@@ -317,18 +322,22 @@ async function maybeAutoRespond() {
 
     const uiContainer = document.createElement("div");
     uiContainer.id = CONTAINER_ID;
+    uiContainer.style.position = "relative";
     uiContainer.innerHTML = `
       <div style="
         display: flex;
         width: 80%;
         margin: 2em auto;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+      -webkit-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+      -moz-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
         font-family: 'Segoe UI', sans-serif;
         overflow: hidden;
         background-color: #fff;
         color: black;
         min-height: 300px;
+        max-height: 600px;
       ">
         <!-- Sidebar -->
         <div style="
@@ -336,8 +345,9 @@ async function maybeAutoRespond() {
           padding: 20px;
           width: 200px;
           border-right: 1px solid #ddd;
+          overflow-y:auto;
         ">
-          <h3 style="margin-top: 0; font-size: 18px;">Chat Threads</h3>
+          <h2 style="margin-top: 0; font-size: 18px;">Chat Threads</h2>
           <div id="chat-thread-list" style="
             max-height: 200px;
             overflow-y: auto;
@@ -379,7 +389,7 @@ async function maybeAutoRespond() {
             font-size: 1rem;
             margin-top: 10px;
           ">🗑 Clear All</button>
-         
+
           <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
           <button id="report-bug-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -397,17 +407,32 @@ async function maybeAutoRespond() {
         </div>
 
         <!-- Main Content -->
-        <div style="flex: 1; padding: 20px; display:flex; flex-direction:column;">
+        <div style="flex: 1; padding: 20px; display:flex; flex-direction:column; position:relative;">
           <h2 style="margin-top: 0;">Talk to ChatGPT</h2>
           <div id="chat-message-area" style="
             flex:1;
             overflow-y:auto;
+            max-height:400px;
+            min-height:200px;
             border:1px solid #ddd;
             padding:10px;
             margin-bottom:10px;
             border-radius:6px;
             background:#fafafa;
           "></div>
+          <button id="scroll-to-bottom" style="
+            position:absolute;
+            bottom:70px;
+            right:30px;
+            background:#007bff;
+            color:white;
+            padding:6px 10px;
+            border:none;
+            border-radius:20px;
+            cursor:pointer;
+            display:none;
+            box-shadow:0 2px 8px rgba(0,0,0,0.2);
+          ">⬇ Scroll to latest</button>
           <input id="custom-ai-input" type="text" placeholder="Type your message here..." style="
             width: 100%;
             padding: 12px;
@@ -428,18 +453,17 @@ async function maybeAutoRespond() {
 
     const input = document.getElementById("custom-ai-input");
     input.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    const val = input.value.trim();
-    if (val !== "") {
-      await saveMessageToActiveThread(val, "user");
-      input.value = "";
-      await maybeAutoRespond(); // 👈 Automatisch antworten
-    }
-  }
-});
-
-
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const val = input.value.trim();
+        if (val !== "") {
+          await saveMessageToActiveThread(val, "user");
+          input.value = "";
+          await maybeAutoRespond();
+        }
+      }
+    });
+    
     if (googleSearchInput) {
   googleSearchInput.addEventListener("keydown", async (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -454,6 +478,22 @@ async function maybeAutoRespond() {
   });
 }
 
+    // 🆕 Scroll-Verhalten
+    const chatArea = document.getElementById("chat-message-area");
+    const scrollBtn = document.getElementById("scroll-to-bottom");
+
+    chatArea.addEventListener("scroll", () => {
+      const nearBottom =
+        chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 50;
+      autoScrollEnabled = nearBottom;
+      scrollBtn.style.display = nearBottom ? "none" : "block";
+    });
+
+    scrollBtn.addEventListener("click", () => {
+      chatArea.scrollTop = chatArea.scrollHeight;
+      autoScrollEnabled = true;
+      scrollBtn.style.display = "none";
+    });
 
     Promise.all([
       getThreads(),
@@ -475,10 +515,6 @@ async function maybeAutoRespond() {
   function init() {
     const targetDiv = document.getElementById("appbar");
     if (targetDiv) createUI(targetDiv);
-
-    // Google AI
-    const gAI = document.getElementById("rcnt");
-    gAI.children[1].style.display="none";
   }
 
   const observer = new MutationObserver(() => {
@@ -487,12 +523,11 @@ async function maybeAutoRespond() {
   });
 
   window.addEventListener("load", async () => {
-  const body = document.body;
-  if (body) {
-    observer.observe(body, { childList: true, subtree: true });
-    init();
-    await maybeAutoRespond(); // ✅ Jetzt korrekt
-  }
-});
-
+    const body = document.body;
+    if (body) {
+      observer.observe(body, { childList: true, subtree: true });
+      init();
+      await maybeAutoRespond();
+    }
+  });
 })();
