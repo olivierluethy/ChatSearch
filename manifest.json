@@ -403,5 +403,11 @@
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["js/bootstrap.bundle.min.js", "css/bootstrap.min.css", "icons/bootstrap-icons.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

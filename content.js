@@ -139,7 +139,7 @@
         titleWrapper.appendChild(title);
         titleWrapper.appendChild(time);
 
-        // ✏️ Bearbeiten-Button
+        // ✏️ Edit-Button
         const editBtn = document.createElement("button");
         editBtn.innerHTML = "✏️";
         editBtn.style = `
@@ -149,9 +149,9 @@
           font-size:14px;
           margin-left:8px;
         `;
-        editBtn.title = "Thread bearbeiten";
+        editBtn.title = "Edit Thread";
 
-        // 🗑 Löschen-Button
+        // 🗑 Delete-Button
         const delBtn = document.createElement("button");
         delBtn.textContent = "🗑";
         delBtn.style = `
@@ -161,10 +161,10 @@
           font-size:14px;
           margin-left:8px;
         `;
-        delBtn.title = "Thread löschen";
+        delBtn.title = "Delete Thread";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (confirm(`Thread "${thread.name}" löschen?`)) {
+          if (confirm(`Delete thread “${thread.name}”?`)) {
             deleteThread(thread.id);
           }
         });
@@ -230,7 +230,7 @@
     if (!area) return;
     area.innerHTML = "";
     if (!messages || messages.length === 0) {
-      area.innerHTML = `<div style="color:#777; font-size:14px;">Keine Nachrichten in diesem Thread.</div>`;
+      area.innerHTML = `<div style="color:#777; font-size:14px;">No messages in this thread.</div>`;
       return;
     }
     messages.forEach((m) => {
@@ -296,16 +296,26 @@
             padding: 5px;
           "></div>
           <button id="new-thread-btn" style="
-            padding: 6px 10px;
-            width: 100%;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-top: 5px;
-          ">➕ New Chat</button>
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 5px;
+">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 16 16">
+    <path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  New Chat
+</button>
+
           <button id="clear-history" style="
             padding: 10px;
             width: 100%;
@@ -317,11 +327,26 @@
             font-size: 1rem;
             margin-top: 10px;
           ">🗑 Clear All</button>
+         
+          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+          <button id="report-bug-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Report Bug
+          </button>
+          <button id="get-help-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            Get Help
+          </button>
+          <button id="privacy-policy-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9.dstrokep-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            Privacy Policy
+          </button>
+        </div>
         </div>
 
         <!-- Main Content -->
         <div style="flex: 1; padding: 20px; display:flex; flex-direction:column;">
-          <h2 style="margin-top: 0;">Talk to AI</h2>
+          <h2 style="margin-top: 0;">Talk to ChatGPT</h2>
           <div id="chat-message-area" style="
             flex:1;
             overflow-y:auto;
@@ -346,7 +371,7 @@
 
     document.getElementById("new-thread-btn").addEventListener("click", createNewThread);
     document.getElementById("clear-history").addEventListener("click", () => {
-      if (confirm("Alle Chat-Threads wirklich löschen?")) clearAllThreads();
+      if (confirm("Are you sure you want to delete all chat threads?")) clearAllThreads();
     });
 
     const input = document.getElementById("custom-ai-input");
