@@ -75,23 +75,37 @@
     }
   }
 
-  async function saveMessageToActiveThread(text) {
-    if (!text.trim()) return;
-    let threads = await getThreads();
-    if (!activeThreadId) {
-      await createNewThread();
-      threads = await getThreads();
-    }
-    const thread = threads.find((t) => t.id === activeThreadId);
-    if (!thread) return;
-    thread.messages.push({
-      id: "msg_" + Date.now(),
-      text: text.trim(),
-      timestamp: Date.now(),
-    });
-    await saveThreads(threads);
-    renderMessages(thread.messages);
+  async function saveMessageToActiveThread(text, role = "user") {
+  if (!text.trim()) return;
+  let threads = await getThreads();
+  if (!activeThreadId) {
+    await createNewThread();
+    threads = await getThreads();
   }
+  const thread = threads.find((t) => t.id === activeThreadId);
+  if (!thread) return;
+  thread.messages.push({
+    id: "msg_" + Date.now(),
+    text: text.trim(),
+    timestamp: Date.now(),
+    role, // 👈 Wichtig!
+  });
+  await saveThreads(threads);
+  renderMessages(thread.messages);
+}
+
+async function maybeAutoRespond() {
+  const threads = await getThreads();
+  const thread = threads.find((t) => t.id === activeThreadId);
+  if (!thread || thread.messages.length === 0) return;
+
+  const lastMsg = thread.messages[thread.messages.length - 1];
+  
+  if (lastMsg.role === "user") {
+    const response = await sendToApi(lastMsg.text);
+    await saveMessageToActiveThread(response, "ai");
+  }
+}
 
   async function clearAllThreads() {
     await saveThreads([]);
@@ -259,6 +273,44 @@
       .replace(/'/g, "&#039;");
   }
 
+  async function sendToApi(text) {
+  const payload = {
+    model: "gpt-3.5-turbo",  // Oder "gpt-4o-mini" wenn dein Backend das supportet
+    messages: [
+      {
+        role: "user",
+        content: text,
+      },
+    ],
+  };
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/change-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.response || "Keine Antwort erhalten.";
+  } catch (error) {
+    console.error("API Error:", error);
+    return `Error: ${error.message}`;
+  }
+}
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
     const googleSearchInput = document.querySelector("textarea");
@@ -338,7 +390,7 @@
             Get Help
           </button>
           <button id="privacy-policy-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9.dstrokep-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
             Privacy Policy
           </button>
         </div>
@@ -375,27 +427,33 @@
     });
 
     const input = document.getElementById("custom-ai-input");
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        const val = input.value.trim();
-        if (val !== "") {
-          saveMessageToActiveThread(val);
-          input.value = "";
-        }
-      }
-    });
+    input.addEventListener("keydown", async (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    const val = input.value.trim();
+    if (val !== "") {
+      await saveMessageToActiveThread(val, "user");
+      input.value = "";
+      await maybeAutoRespond(); // 👈 Automatisch antworten
+    }
+  }
+});
+
 
     if (googleSearchInput) {
-      googleSearchInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          const val = googleSearchInput.value.trim();
-          if (val !== "") {
-            saveMessageToActiveThread(val);
-          }
-        }
-      });
+  googleSearchInput.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const val = googleSearchInput.value.trim();
+      if (val !== "") {
+        await saveMessageToActiveThread(val, "user");
+        googleSearchInput.value = "";
+        await maybeAutoRespond(); // 👈
+      }
     }
+  });
+}
+
 
     Promise.all([
       getThreads(),
@@ -417,6 +475,10 @@
   function init() {
     const targetDiv = document.getElementById("appbar");
     if (targetDiv) createUI(targetDiv);
+
+    // Google AI
+    const gAI = document.getElementById("rcnt");
+    gAI.children[1].style.display="none";
   }
 
   const observer = new MutationObserver(() => {
@@ -424,11 +486,13 @@
     if (targetDiv && !document.getElementById(CONTAINER_ID)) createUI(targetDiv);
   });
 
-  window.addEventListener("load", () => {
-    const body = document.body;
-    if (body) {
-      observer.observe(body, { childList: true, subtree: true });
-      init();
-    }
-  });
+  window.addEventListener("load", async () => {
+  const body = document.body;
+  if (body) {
+    observer.observe(body, { childList: true, subtree: true });
+    init();
+    await maybeAutoRespond(); // ✅ Jetzt korrekt
+  }
+});
+
 })();
