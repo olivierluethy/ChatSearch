@@ -379,7 +379,6 @@
 </button>
 
           <button id="clear-history" style="
-            padding: 10px;
             width: 100%;
             background-color: #ff4d4f;
             color: white;
@@ -433,14 +432,28 @@
             display:none;
             box-shadow:0 2px 8px rgba(0,0,0,0.2);
           ">⬇ Scroll to latest</button>
+          <div style="display: flex; gap: 10px; align-items: center;">
           <input id="custom-ai-input" type="text" placeholder="Type your message here..." style="
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
+            flex: 1;
+          padding: 12px;
+          font-size: 1rem;
+          border: 1px solid #ccc;
+          border-radius: 20px;
+          box-sizing: border-box;
+          outline: none;
+          transition: border-color 0.2s;
           " />
+          <button id="sendToApi" style="
+          padding: 12px 20px;
+          background-color: #25D366;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 1rem;
+          transition: background 0.2s;
+        ">Send</button>
+          </div>
         </div>
       </div>
     `;
@@ -463,6 +476,16 @@
         }
       }
     });
+
+    const submitButton = document.getElementById("sendToApi");
+    submitButton.addEventListener("click", async (e) =>{
+      const val = input.value.trim();
+        if (val !== "") {
+          await saveMessageToActiveThread(val, "user");
+          input.value = "";
+          await maybeAutoRespond();
+        }
+    })
     
     if (googleSearchInput) {
   googleSearchInput.addEventListener("keydown", async (e) => {
