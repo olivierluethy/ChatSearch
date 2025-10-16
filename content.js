@@ -318,193 +318,258 @@
 
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
+
+    // Optional: Google Suchfeld (z. B. bei Integration in Google-Seiten)
     const googleSearchInput = document.querySelector("textarea");
 
+    // === UI CONTAINER ===
     const uiContainer = document.createElement("div");
     uiContainer.id = CONTAINER_ID;
     uiContainer.style.position = "relative";
     uiContainer.innerHTML = `
-      <div style="
-        display: flex;
-        width: 80%;
-        margin: 2em auto;
-        border-radius: 12px;
-        box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-      -webkit-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-      -moz-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
-        font-family: 'Segoe UI', sans-serif;
-        overflow: hidden;
-        background-color: #fff;
-        color: black;
-        min-height: 300px;
-        max-height: 600px;
-      ">
-        <!-- Sidebar -->
-        <div style="
-          background-color: #f4f4f4;
-          padding: 20px;
-          width: 200px;
-          border-right: 1px solid #ddd;
-          overflow-y:auto;
-        ">
-          <h2 style="margin-top: 0; font-size: 18px;">Chat Threads</h2>
-          <div id="chat-thread-list" style="
-            max-height: 200px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: #fff;
-            padding: 5px;
-          "></div>
-          <button id="new-thread-btn" style="
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  width: 100%;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 5px;
-">
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 16 16">
-    <path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  New Chat
-</button>
+    <div class="ai-box">
+      
+      <!-- Sidebar -->
+      <div id="sidebar" class="sidebar">
+        <h2 class="sidebar-title">Chat Threads</h2>
+        <div id="chat-thread-list" class="thread-list"></div>
+        <button id="new-thread-btn" class="btn-primary new-thread">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 16 16">
+            <path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          New Chat
+        </button>
+        <button id="clear-history" class="btn-danger">🗑 Clear All</button>
 
-          <button id="clear-history" style="
-            width: 100%;
-            background-color: #ff4d4f;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            margin-top: 10px;
-          ">🗑 Clear All</button>
-
-          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-          <button id="report-bug-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Report Bug
-          </button>
-          <button id="get-help-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-            Get Help
-          </button>
-          <button id="privacy-policy-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-            Privacy Policy
-          </button>
-        </div>
-        </div>
-
-        <!-- Main Content -->
-        <div style="flex: 1; padding: 20px; display:flex; flex-direction:column; position:relative;">
-          <h2 style="margin-top: 0;">Talk to ChatGPT</h2>
-          <div id="chat-message-area" style="
-            flex:1;
-            overflow-y:auto;
-            max-height:400px;
-            min-height:200px;
-            border:1px solid #ddd;
-            padding:10px;
-            margin-bottom:10px;
-            border-radius:6px;
-            background:#fafafa;
-          "></div>
-          <button id="scroll-to-bottom" style="
-            position:absolute;
-            bottom:70px;
-            right:30px;
-            background:#007bff;
-            color:white;
-            padding:6px 10px;
-            border:none;
-            border-radius:20px;
-            cursor:pointer;
-            display:none;
-            box-shadow:0 2px 8px rgba(0,0,0,0.2);
-          ">⬇ Scroll to latest</button>
-          <div style="display: flex; gap: 10px; align-items: center;">
-          <input id="custom-ai-input" type="text" placeholder="Type your message here..." style="
-            flex: 1;
-          padding: 12px;
-          font-size: 1rem;
-          border: 1px solid #ccc;
-          border-radius: 20px;
-          box-sizing: border-box;
-          outline: none;
-          transition: border-color 0.2s;
-          " />
-          <button id="sendToApi" style="
-          padding: 12px 20px;
-          background-color: #25D366;
-          color: white;
-          border: none;
-          border-radius: 20px;
-          cursor: pointer;
-          font-size: 1rem;
-          transition: background 0.2s;
-        ">Send</button>
-          </div>
+        <div class="sidebar-links">
+          <button id="report-bug-btn" class="link-btn">🐞 Report Bug</button>
+          <button id="get-help-btn" class="link-btn">❓ Get Help</button>
+          <button id="privacy-policy-btn" class="link-btn">🔐 Privacy Policy</button>
         </div>
       </div>
-    `;
+
+      <!-- Resizer -->
+      <div id="resizer" class="sidebar-resizer"></div>
+
+      <!-- Main Chat Area -->
+      <div class="chat-main">
+        <h2 style="margin-top: 0;">Talk to ChatGPT</h2>
+        <div id="chat-message-area" class="chat-message-area"></div>
+        <button id="scroll-to-bottom" class="scroll-to-bottom-btn">⬇ Scroll to latest</button>
+
+        <div class="chat-input-row">
+          <input id="custom-ai-input" type="text" placeholder="Type your message here..." class="chat-input"/>
+          <button id="sendToApi" class="btn-send">Send</button>
+        </div>
+      </div>
+    </div>
+  `;
+
     targetDiv.insertBefore(uiContainer, targetDiv.firstChild);
 
-    document.getElementById("new-thread-btn").addEventListener("click", createNewThread);
-    document.getElementById("clear-history").addEventListener("click", () => {
-      if (confirm("Are you sure you want to delete all chat threads?")) clearAllThreads();
-    });
+    // === STYLES (eingebettet, kann aber auch ausgelagert werden) ===
+    const style = document.createElement("style");
+    style.textContent = `
+    .ai-box {
+      display: flex;
+      width: 80%;
+      margin: 2em auto;
+      border-radius: 12px;
+      box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+      background-color: #fff;
+      color: black;
+      min-height: 300px;
+      max-height: 600px;
+    }
+    .sidebar {
+      background: #f4f4f4;
+      padding: 20px;
+      width: 200px;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+      min-width: 150px;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+    .sidebar-title {
+      font-size: 18px;
+      margin-top: 0;
+    }
+    .thread-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      padding: 5px;
+    }
+    .btn-primary {
+      background: #007bff;
+      color: white;
+      padding: 6px 10px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      margin-top: 5px;
+    }
+    .btn-danger {
+      background: #ff4d4f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .sidebar-links {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .link-btn {
+      width: 100%;
+      padding: 0.25rem;
+      background: #e5e7eb;
+      color: #1f2937;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .sidebar-resizer {
+      width: 5px;
+      cursor: col-resize;
+      background: #ddd;
+    }
+    .chat-main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .chat-message-area {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      min-height: 200px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .scroll-to-bottom-btn {
+      position: absolute;
+      bottom: 70px;
+      right: 30px;
+      background: #007bff;
+      color: white;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 12px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .btn-send {
+      padding: 12px 20px;
+      background-color: #25D366;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+  `;
+    document.head.appendChild(style);
+
+    // === EVENTS ===
 
     const input = document.getElementById("custom-ai-input");
+    const chatArea = document.getElementById("chat-message-area");
+    const scrollBtn = document.getElementById("scroll-to-bottom");
+
+    // Zentraler Sende-Handler (für Button + Enter + Google Input)
+    async function handleSendMessage(text) {
+      const val = text.trim();
+      if (val === "") return;
+      await saveMessageToActiveThread(val, "user");
+      input.value = "";
+      await maybeAutoRespond();
+    }
+
     input.addEventListener("keydown", async (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        const val = input.value.trim();
-        if (val !== "") {
-          await saveMessageToActiveThread(val, "user");
-          input.value = "";
-          await maybeAutoRespond();
-        }
+        handleSendMessage(input.value);
       }
     });
 
     const submitButton = document.getElementById("sendToApi");
-    submitButton.addEventListener("click", async (e) =>{
+    submitButton.addEventListener("click", async (e) => {
       const val = input.value.trim();
-        if (val !== "") {
-          await saveMessageToActiveThread(val, "user");
-          input.value = "";
-          await maybeAutoRespond();
-        }
-    })
-    
-    if (googleSearchInput) {
-  googleSearchInput.addEventListener("keydown", async (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      const val = googleSearchInput.value.trim();
       if (val !== "") {
         await saveMessageToActiveThread(val, "user");
-        googleSearchInput.value = "";
-        await maybeAutoRespond(); // 👈
+        input.value = "";
+        await maybeAutoRespond();
       }
+    });
+
+    if (googleSearchInput) {
+      googleSearchInput.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          const val = googleSearchInput.value.trim();
+          if (val !== "") {
+            await saveMessageToActiveThread(val, "user");
+            googleSearchInput.value = "";
+            await maybeAutoRespond(); // 👈
+          }
+        }
+      });
     }
-  });
-}
 
-    // 🆕 Scroll-Verhalten
-    const chatArea = document.getElementById("chat-message-area");
-    const scrollBtn = document.getElementById("scroll-to-bottom");
+    // Report Bug | Get Help | Privacy Policy
+    const reportBtn = document.getElementById("report-bug-btn");
 
+    reportBtn.addEventListener("click", function() {
+      window.open(
+        "https://docs.google.com/forms/d/e/1FAIpQLScSfquZW5idQXGsCHXc-OlMaa97eh_1i9BnmMf7Ea9HVSFQzg/viewform?usp=sharing&ouid=107403711423930702162",
+        "_blank"
+      );
+    });
+
+    // Scroll-Verhalten
     chatArea.addEventListener("scroll", () => {
       const nearBottom =
         chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 50;
@@ -518,6 +583,16 @@
       scrollBtn.style.display = "none";
     });
 
+    // Thread Buttons
+    document
+      .getElementById("new-thread-btn")
+      .addEventListener("click", createNewThread);
+    document.getElementById("clear-history").addEventListener("click", () => {
+      if (confirm("Are you sure you want to delete all chat threads?"))
+        clearAllThreads();
+    });
+
+    // Threads & aktiver Chat laden
     Promise.all([
       getThreads(),
       new Promise((resolve) => {
@@ -533,6 +608,39 @@
         if (active) renderMessages(active.messages);
       }
     });
+
+    // === Sidebar Resizer ===
+    const sidebar = document.getElementById("sidebar");
+    const resizer = document.getElementById("resizer");
+
+    const savedWidth = localStorage.getItem("sidebarWidth");
+    if (savedWidth) sidebar.style.width = savedWidth + "px";
+
+    let isResizing = false;
+
+    resizer.addEventListener("mousedown", () => {
+      isResizing = true;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isResizing) return;
+      const newWidth = Math.min(
+        Math.max(e.clientX - sidebar.getBoundingClientRect().left, 150),
+        400,
+      );
+      sidebar.style.width = newWidth + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem("sidebarWidth", parseInt(sidebar.offsetWidth));
+      }
+    });
   }
 
   function init() {
@@ -542,7 +650,8 @@
 
   const observer = new MutationObserver(() => {
     const targetDiv = document.getElementById("appbar");
-    if (targetDiv && !document.getElementById(CONTAINER_ID)) createUI(targetDiv);
+    if (targetDiv && !document.getElementById(CONTAINER_ID))
+      createUI(targetDiv);
   });
 
   window.addEventListener("load", async () => {
