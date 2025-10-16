@@ -1,27 +1,26 @@
 (function () {
   const CONTAINER_ID = "custom-ai-box";
 
-  // SVG icon for user
+  // SVG icon for user (unchanged)
   const userIcon = `
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="#555"/>
     </svg>
   `;
 
-  // SVG icon for AI
+  // SVG icon for AI (unchanged)
   const aiIcon = `
-<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="24" height="24" rx="12" fill="#E0F7FA"/>
-  <path d="M12 2C12.55 2 13 2.45 13 3V4H11V3C11 2.45 11.45 2 12 2Z" fill="#607D8B"/>
-  <circle cx="12" cy="12" r="6" fill="white" stroke="#607D8B" stroke-width="2"/>
-  <circle cx="9.5" cy="11.5" r="1.5" fill="#607D8B"/>
-  <circle cx="14.5" cy="11.5" r="1.5" fill="#607D8B"/>
-  <path d="M9 15C9.5 15.5 10.7 16 12 16C13.3 16 14.5 15.5 15 15" stroke="#607D8B" stroke-width="1.5" stroke-linecap="round"/>
-</svg>
-`;
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="24" height="24" rx="12" fill="#E3F2FD"/>
+      <path d="M12 2C12.55 2 13 2.45 13 3V4H11V3C11 2.45 11.45 2 12 2Z" fill="#1565C0"/>
+      <circle cx="12" cy="12" r="6" fill="white" stroke="#1565C0" stroke-width="2"/>
+      <circle cx="9.5" cy="11.5" r="1.5" fill="#1565C0"/>
+      <circle cx="14.5" cy="11.5" r="1.5" fill="#1565C0"/>
+      <path d="M9 15C9.5 15.5 10.7 16 12 16C13.3 16 14.5 15.5 15 15" stroke="#1565C0" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  `;
 
   function createUI(targetDiv) {
-    // Prevent duplicate injection
     if (document.getElementById(CONTAINER_ID)) return;
 
     const googleSearchInput = document.querySelector("textarea");
@@ -31,104 +30,195 @@
     uiContainer.innerHTML = `
       <div style="
         display: flex;
-        width: 80%;
+        width: 90%;
+        max-width: 1200px;
         margin: 2em auto;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        font-family: 'Segoe UI', sans-serif;
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(145deg, #ffffff, #f8fafc);
+        color: #1e293b;
+        min-height: 400px;
         overflow: hidden;
-        background-color: #fff;
-        color: black;
-        min-height: 300px;
       ">
         <!-- Sidebar Navigation -->
         <div style="
-          background-color: #f4f4f4;
-          padding: 20px;
-          width: 200px;
-          border-right: 1px solid #ddd;
+          background: #f1f5f9;
+          padding: 24px;
+          width: 260px;
+          border-right: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          max-height: 60vh;
         ">
-          <h3 style="margin-top: 0; font-size: 18px;">Chat Threads</h3>
+          <h3 style="
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+          ">Chat Threads</h3>
           <div id="threads-container" style="
-            max-height: 150px;
+            flex: 1;
+            max-height: 450px;
             overflow-y: auto;
-            margin-bottom: 10px;
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #e2e8f0;
           ">
-            <ul id='threads' style="list-style: none; padding: 0; margin: 0;"></ul>
+            <ul id="threads" style="
+              list-style: none;
+              padding: 0;
+              margin: 0;
+              font-size: 0.9rem;
+              color: #1e293b;
+            "></ul>
           </div>
           <button id="new-thread-btn" style="
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  width: 100%;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 5px;
-">
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 16 16">
-    <path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  New Chat
-</button>
-
-<button id="clear-history" style="
             display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  width: 100%;
-  background-color: #ff4d4f;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 5px;
-          ">🗑 Clear All</button>
-
-          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-          <button id="report-bug-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Report Bug
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: background 0.2s ease;
+          ">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 16 16">
+              <path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            New Chat
           </button>
-          <button id="get-help-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-            Get Help
+          <button id="clear-history" style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            background: #dc2626;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: background 0.2s ease;
+          ">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="white"/>
+            </svg>
+            Clear All
           </button>
-          <button id="privacy-policy-btn" style="width: 100%; padding: 0.25rem; background-color: #e5e7eb; color: #1f2937; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background-color 0.2s;">
-            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-            Privacy Policy
-          </button>
-        </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button id="report-bug-btn" style="
+              padding: 8px;
+              background: #e5e7eb;
+              color: #1e293b;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 0.85rem;
+              font-weight: 500;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              transition: background 0.2s ease;
+            ">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Report Bug
+            </button>
+            <button id="get-help-btn" style="
+              padding: 8px;
+              background: #e5e7eb;
+              color: #1e293b;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 0.85rem;
+              font-weight: 500;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              transition: background 0.2s ease;
+            ">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+              Get Help
+            </button>
+            <button id="privacy-policy-btn" style="
+              padding: 8px;
+              background: #e5e7eb;
+              color: #1e293b;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 0.85rem;
+              font-weight: 500;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              transition: background 0.2s ease;
+            ">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+              </svg>
+              Privacy Policy
+            </button>
+          </div>
         </div>
 
         <!-- Main Content Area -->
-        <div id="main-content" style="flex: 1; padding: 20px;">
-          <h2 style="margin-top: 0;">Talk to AI</h2>
+        <div id="main-content" style="
+          flex: 1;
+          padding: 24px;
+          background: #ffffff;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+          ">Talk to AI</h2>
           <div id="chat-display" style="
-            margin-top: 20px;
-            max-height: 300px;
+            flex: 1;
+            max-height: 425px;
             overflow-y: auto;
-            padding-right: 10px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #e2e8f0;
           "></div>
           <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" type="text" placeholder="Type your message here..." style="
             width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
             box-sizing: border-box;
-            margin-top: 10px;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
           " />
         </div>
       </div>
@@ -136,30 +226,29 @@
 
     targetDiv.insertBefore(uiContainer, targetDiv.firstChild);
 
-    // Dynamically adjust threads container height to match main content area
+    // Dynamically adjust threads container height
     function adjustThreadsContainerHeight() {
       const mainContent = document.getElementById("main-content");
       const threadsContainer = document.getElementById("threads-container");
-      //if (mainContent && threadsContainer) {
-      // const mainContentHeight = mainContent.getBoundingClientRect().height;
-      //threadsContainer.style.maxHeight = `${mainContentHeight}px`;
-      // }
+      if (mainContent && threadsContainer) {
+        const mainContentHeight = mainContent.getBoundingClientRect().height;
+        threadsContainer.style.maxHeight = `${mainContentHeight - 80}px`;
+      }
     }
 
-    // Call adjustThreadsContainerHeight after threads are rendered
+    // Render threads with animation
     function renderThreads() {
-      chrome.storage.local.get({ threads: [] }, function (result) {
+      chrome.storage.local.get({ threads: [], chats: [] }, function (result) {
         let threads = result.threads;
+        const chats = result.chats;
 
-        // Sort threads by creation date (newest first)
         threads = threads.sort((a, b) => b.created - a.created);
 
-        // Ensure at least one thread is active
         const hasActiveThread = threads.some((t) => t.isActive === "yes");
         if (!hasActiveThread && threads.length > 0) {
           threads = threads.map((t, index) => ({
             ...t,
-            isActive: index === 0 ? "yes" : "no", // Set newest thread (first after sort) as active
+            isActive: index === 0 ? "yes" : "no",
           }));
           chrome.storage.local.set({ threads: threads }, () => {
             console.log("Set newest thread as active:", threads[0]);
@@ -167,38 +256,95 @@
         }
 
         const threadsList = document.getElementById("threads");
-        threadsList.innerHTML = ""; // Clear existing threads
+        threadsList.innerHTML = "";
 
-        threads.forEach((thread) => {
+        threads.forEach((thread, index) => {
           const li = document.createElement("li");
-          li.style.padding = "10px";
+          li.style.padding = "12px";
           li.style.cursor = "pointer";
           li.style.backgroundColor =
-            thread.isActive === "yes" ? "#ddd" : "transparent";
-          li.style.borderBottom = "1px solid #eee";
+            thread.isActive === "yes" ? "#e3f2fd" : "transparent";
+          li.style.borderBottom = "1px solid #e5e7eb";
           li.style.display = "flex";
           li.style.alignItems = "center";
+          li.style.gap = "8px";
+          li.style.transition = "background 0.2s ease";
+          li.style.opacity = "0";
+          li.style.transform = "translateX(-20px)";
+          li.style.animation = `slideIn 0.3s ease forwards ${index * 0.1}s`;
+
+          const threadInfoContainer = document.createElement("div");
+          threadInfoContainer.style.flex = "1";
+          threadInfoContainer.style.overflow = "hidden";
+          threadInfoContainer.style.textOverflow = "ellipsis";
+          threadInfoContainer.style.whiteSpace = "normal";
 
           const threadNameSpan = document.createElement("span");
           threadNameSpan.textContent = thread.name;
-          threadNameSpan.style.display = "inline-block";
-          threadNameSpan.style.width = "calc(100% - 60px)"; // Adjusted for two buttons
+          threadNameSpan.style.fontWeight = "500";
+          threadNameSpan.style.fontSize = "0.95rem";
+          threadNameSpan.style.color = "#1e293b";
+
+          const threadDetails = document.createElement("div");
+          threadDetails.style.fontSize = "0.75rem";
+          threadDetails.style.color = "#64748b";
+          threadDetails.style.marginTop = "4px";
+
+          const createdDate = new Date(thread.created).toLocaleDateString(
+            "en-GB",
+            {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            },
+          );
+          const messageCount = chats.filter(
+            (chat) => chat.threadId === thread.id,
+          ).length;
+          threadDetails.textContent = `Created: ${createdDate} | Messages: ${messageCount}`;
 
           const editBtn = document.createElement("button");
           editBtn.textContent = "✏️";
           editBtn.style.background = "none";
           editBtn.style.border = "none";
           editBtn.style.cursor = "pointer";
-          editBtn.style.marginRight = "5px";
+          editBtn.style.fontSize = "0.9rem";
+          editBtn.style.transition = "color 0.2s ease";
 
           const deleteBtn = document.createElement("button");
           deleteBtn.textContent = "🗑️";
           deleteBtn.style.background = "none";
           deleteBtn.style.border = "none";
           deleteBtn.style.cursor = "pointer";
+          deleteBtn.style.fontSize = "0.9rem";
+          deleteBtn.style.transition = "color 0.2s ease";
+
+          editBtn.addEventListener("mouseenter", () => {
+            editBtn.style.color = "#2563eb";
+          });
+          editBtn.addEventListener("mouseleave", () => {
+            editBtn.style.color = "#64748b";
+          });
+          deleteBtn.addEventListener("mouseenter", () => {
+            deleteBtn.style.color = "#dc2626";
+          });
+          deleteBtn.addEventListener("mouseleave", () => {
+            deleteBtn.style.color = "#64748b";
+          });
+
+          li.addEventListener("click", () => {
+            const updatedThreads = threads.map((t) => ({
+              ...t,
+              isActive: t.id === thread.id ? "yes" : "no",
+            }));
+            chrome.storage.local.set({ threads: updatedThreads }, () => {
+              renderThreads();
+              renderChatMessages(thread.id);
+            });
+          });
 
           editBtn.addEventListener("click", (e) => {
-            e.stopPropagation(); // Prevent thread activation on edit
+            e.stopPropagation();
             const newName = prompt("Enter new thread name:", thread.name);
             if (newName && newName.trim()) {
               const updatedThreads = threads.map((t) =>
@@ -211,39 +357,26 @@
           });
 
           deleteBtn.addEventListener("click", (e) => {
-            e.stopPropagation(); // Prevent thread activation on delete
+            e.stopPropagation();
             if (confirm(`Are you sure you want to delete "${thread.name}"?`)) {
               chrome.storage.local.get(
                 { threads: [], chats: [] },
                 function (data) {
-                  // Remove thread
                   let updatedThreads = data.threads.filter(
                     (t) => t.id !== thread.id,
                   );
-                  // Remove associated chats
                   const updatedChats = data.chats.filter(
                     (chat) => chat.threadId !== thread.id,
                   );
-
-                  // Sort threads by creation date (newest first)
                   updatedThreads = updatedThreads.sort(
                     (a, b) => b.created - a.created,
                   );
-
-                  // Ensure an active thread exists
-                  const hasActiveThreadAfterDelete = updatedThreads.some(
-                    (t) => t.isActive === "yes",
-                  );
-                  if (
-                    !hasActiveThreadAfterDelete &&
-                    updatedThreads.length > 0
-                  ) {
+                  if (updatedThreads.length > 0) {
                     updatedThreads = updatedThreads.map((t, index) => ({
                       ...t,
-                      isActive: index === 0 ? "yes" : "no", // Set newest thread as active
+                      isActive: index === 0 ? "yes" : "no",
                     }));
                   }
-
                   chrome.storage.local.set(
                     { threads: updatedThreads, chats: updatedChats },
                     () => {
@@ -251,11 +384,9 @@
                       const newActiveThread = updatedThreads.find(
                         (t) => t.isActive === "yes",
                       );
-                      if (newActiveThread) {
-                        renderChatMessages(newActiveThread.id);
-                      } else {
-                        renderChatMessages(updatedThreads[0]?.id || "");
-                      }
+                      renderChatMessages(
+                        newActiveThread ? newActiveThread.id : "",
+                      );
                     },
                   );
                 },
@@ -263,161 +394,192 @@
             }
           });
 
-          li.addEventListener("click", () => {
-            const updatedThreads = threads.map((t) => ({
-              ...t,
-              isActive: t.id === thread.id ? "yes" : "no",
-            }));
-            chrome.storage.local.set({ threads: updatedThreads }, () => {
-              renderThreads();
-              renderChatMessages(thread.id); // Render messages for active thread
-            });
+          li.addEventListener("mouseenter", () => {
+            li.style.backgroundColor =
+              thread.isActive === "yes" ? "#bfdbfe" : "#f1f5f9";
+          });
+          li.addEventListener("mouseleave", () => {
+            li.style.backgroundColor =
+              thread.isActive === "yes" ? "#e3f2fd" : "transparent";
           });
 
-          li.appendChild(threadNameSpan);
+          threadInfoContainer.appendChild(threadNameSpan);
+          threadInfoContainer.appendChild(threadDetails);
+          li.appendChild(threadInfoContainer);
           li.appendChild(editBtn);
           li.appendChild(deleteBtn);
           threadsList.appendChild(li);
         });
 
-        // Adjust threads container height after rendering
+        const style = document.createElement("style");
+        style.textContent = `
+          @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+        `;
+        document.head.appendChild(style);
+
         adjustThreadsContainerHeight();
       });
     }
 
-    // Report Bug | Get Help | Privacy Policy
-    const reportBtn = document.getElementById("report-bug-btn");
+    // Button hover states
+    const buttons = [
+      "new-thread-btn",
+      "clear-history",
+      "report-bug-btn",
+      "get-help-btn",
+      "privacy-policy-btn",
+    ];
+    buttons.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.background =
+            id === "new-thread-btn"
+              ? "#1e40af"
+              : id === "clear-history"
+                ? "#b91c1c"
+                : "#d1d5db";
+        });
+        btn.addEventListener("mouseleave", () => {
+          btn.style.background =
+            id === "new-thread-btn"
+              ? "#2563eb"
+              : id === "clear-history"
+                ? "#dc2626"
+                : "#e5e7eb";
+        });
+      }
+    });
 
-    reportBtn.addEventListener("click", function () {
+    // Input focus state
+    const input = document.getElementById("custom-ai-input");
+    input.addEventListener("focus", () => {
+      input.style.borderColor = "#2563eb";
+      input.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.2)";
+    });
+    input.addEventListener("blur", () => {
+      input.style.borderColor = "#d1d5db";
+      input.style.boxShadow = "none";
+    });
+
+    // Modals
+    const modalStyles = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    `;
+    const modalContentStyles = `
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1e293b;
+      text-align: left;
+      animation: fadeIn 0.3s ease;
+    `;
+    const modalButtonStyles = `
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    `;
+    const modalStyleElement = document.createElement("style");
+    modalStyleElement.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(modalStyleElement);
+
+    document.getElementById("report-bug-btn").addEventListener("click", () => {
       window.open(
         "https://docs.google.com/forms/d/e/1FAIpQLScSfquZW5idQXGsCHXc-OlMaa97eh_1i9BnmMf7Ea9HVSFQzg/viewform?usp=sharing&ouid=107403711423930702162",
         "_blank",
       );
     });
 
-    const getHelpBtn = document.getElementById("get-help-btn");
-    getHelpBtn.addEventListener("click", function () {
+    document.getElementById("get-help-btn").addEventListener("click", () => {
       const overlay = document.createElement("div");
-      overlay.style.position = "fixed";
-      overlay.style.top = "0";
-      overlay.style.left = "0";
-      overlay.style.width = "100vw";
-      overlay.style.height = "100vh";
-      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-      overlay.style.display = "flex";
-      overlay.style.alignItems = "center";
-      overlay.style.justifyContent = "center";
-      overlay.style.zIndex = "1000";
-
+      overlay.style.cssText = modalStyles;
       const modal = document.createElement("div");
-      modal.style.backgroundColor = "#fff";
-      modal.style.padding = "20px";
-      modal.style.borderRadius = "8px";
-      modal.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.3)";
-      modal.style.maxWidth = "400px";
-      modal.style.textAlign = "center";
-      modal.style.fontFamily = "sans-serif";
-      modal.style.color = "black";
-
-      const title = document.createElement("h2");
-      title.textContent = "How we can help";
-      const message = document.createElement("p");
-      message.innerHTML = `
-        <strong>Welcome to your AI-powered Sidebar!</strong><br/><br/>
-        Here's how this tool can help you be more productive every day:
-        <ul style="text-align:left; margin:1em 0; padding-left: 1em;">
-          <li><strong>🔍 Google Integration:</strong> Just type something into Google – the AI will detect your query and instantly provide a helpful answer.</li>
-          <li><strong>💬 Chat History:</strong> All your conversations are saved in threads, so you can return to them anytime or continue where you left off.</li>
-          <li><strong>🧠 Context Awareness:</strong> The AI remembers the conversation context per thread. The longer the thread, the smarter the answers.</li>
-          <li><strong>✏️ Rename & 🗑 Delete:</strong> Organize your chats with custom titles – or remove old threads when you no longer need them.</li>
-          <li><strong>📌 Autoscroll & Scroll Button:</strong> Never miss a new message – or jump to the latest response with a single click.</li>
-        </ul>
-        <p style="font-size:14px; color:#555;">
-          👉 Tip: Use this sidebar daily to get quick answers, make better decisions, or brainstorm ideas – all right next to your search results.
+      modal.style.cssText = modalContentStyles;
+      modal.innerHTML = `
+        <h2 style="margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;">How we can help</h2>
+        <p style="font-size: 0.95rem; line-height: 1.5;">
+          <strong>Welcome to your AI-powered Sidebar!</strong><br><br>
+          Here's how this tool can help you be more productive every day:
+          <ul style="margin: 1em 0; padding-left: 1.5em; font-size: 0.95rem;">
+            <li><strong>🔍 Google Integration:</strong> Just type something into Google – the AI will detect your query and instantly provide a helpful answer.</li>
+            <li><strong>💬 Chat History:</strong> All your conversations are saved in threads, so you can return to them anytime or continue where you left off.</li>
+            <li><strong>🧠 Context Awareness:</strong> The AI remembers the conversation context per thread. The longer the thread, the smarter the answers.</li>
+            <li><strong>✏️ Rename & 🗑 Delete:</strong> Organize your chats with custom titles – or remove old threads when you no longer need them.</li>
+            <li><strong>📌 Autoscroll & Scroll Button:</strong> Never miss a new message – or jump to the latest response with a single click.</li>
+          </ul>
+          <p style="font-size: 0.85rem; color: #64748b;">
+            👉 Tip: Use this sidebar daily to get quick answers, make better decisions, or brainstorm ideas – all right next to your search results.
+          </p>
         </p>
+        <button style="${modalButtonStyles}">Close</button>
       `;
-
-      const closeBtn = document.createElement("button");
-      closeBtn.textContent = "Schließen";
-      closeBtn.style.marginTop = "15px";
-      closeBtn.style.padding = "8px 16px";
-      closeBtn.style.cursor = "pointer";
-      closeBtn.addEventListener("click", function () {
-        document.body.removeChild(overlay);
-      });
-
-      modal.appendChild(title);
-      modal.appendChild(message);
-      modal.appendChild(closeBtn);
+      modal
+        .querySelector("button")
+        .addEventListener("click", () => document.body.removeChild(overlay));
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
     });
 
-    const getPPBtn = document.getElementById("privacy-policy-btn");
-
-    getPPBtn.addEventListener("click", function () {
-      const overlay = document.createElement("div");
-      overlay.style.position = "fixed";
-      overlay.style.top = "0";
-      overlay.style.left = "0";
-      overlay.style.width = "100vw";
-      overlay.style.height = "100vh";
-      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-      overlay.style.display = "flex";
-      overlay.style.alignItems = "center";
-      overlay.style.justifyContent = "center";
-      overlay.style.zIndex = "1000";
-
-      const modal = document.createElement("div");
-      modal.style.backgroundColor = "#fff";
-      modal.style.padding = "20px";
-      modal.style.borderRadius = "8px";
-      modal.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.3)";
-      modal.style.maxWidth = "500px";
-      modal.style.textAlign = "left";
-      modal.style.fontFamily = "sans-serif";
-      modal.style.color = "black";
-      modal.style.maxHeight = "80vh";
-      modal.style.overflowY = "auto";
-
-      const title = document.createElement("h2");
-      title.textContent = "Privacy Policy";
-
-      const message = document.createElement("div");
-      message.innerHTML = `
-        <p>
+    document
+      .getElementById("privacy-policy-btn")
+      .addEventListener("click", () => {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = modalStyles;
+        const modal = document.createElement("div");
+        modal.style.cssText = modalContentStyles;
+        modal.innerHTML = `
+        <h2 style="margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;">Privacy Policy</h2>
+        <p style="font-size: 0.95rem; line-height: 1.5;">
           Your privacy is important to us. This tool stores your chat threads locally in your browser using Chrome's extension storage.
+          <ul style="margin: 1em 0; padding-left: 1.5em; font-size: 0.95rem;">
+            <li><strong>📁 Local Storage:</strong> All messages and threads are saved only on your device. We do not collect or transmit personal data.</li>
+            <li><strong>🔐 No Tracking:</strong> This extension does not include analytics, trackers, or ads.</li>
+            <li><strong>🧠 Context Handling:</strong> Your messages are used solely to provide better contextual responses. They are not shared.</li>
+            <li><strong>📤 API Requests:</strong> Messages are sent to your self-hosted API endpoint, if configured. Ensure it complies with your privacy requirements.</li>
+            <li><strong>🗑 Easy Data Removal:</strong> You can clear all stored data anytime via the "Clear All" button.</li>
+          </ul>
+          <p style="font-size: 0.85rem; color: #64748b;">
+            By using this extension, you agree to local-only data handling and understand that your privacy is protected by design.
+          </p>
         </p>
-        <ul style="margin:1em 0; padding-left: 1.2em;">
-          <li><strong>📁 Local Storage:</strong> All messages and threads are saved only on your device. We do not collect or transmit personal data.</li>
-          <li><strong>🔐 No Tracking:</strong> This extension does not include analytics, trackers, or ads.</li>
-          <li><strong>🧠 Context Handling:</strong> Your messages are used solely to provide better contextual responses. They are not shared.</li>
-          <li><strong>📤 API Requests:</strong> Messages are sent to your self-hosted API endpoint, if configured. Ensure it complies with your privacy requirements.</li>
-          <li><strong>🗑 Easy Data Removal:</strong> You can clear all stored data anytime via the "Clear All" button.</li>
-        </ul>
-        <p style="font-size:14px; color:#555;">
-          By using this extension, you agree to local-only data handling and understand that your privacy is protected by design.
-        </p>
+        <button style="${modalButtonStyles}">Close</button>
       `;
-
-      const closeBtn = document.createElement("button");
-      closeBtn.textContent = "Close";
-      closeBtn.style.marginTop = "15px";
-      closeBtn.style.padding = "8px 16px";
-      closeBtn.style.cursor = "pointer";
-
-      closeBtn.addEventListener("click", function () {
-        document.body.removeChild(overlay);
+        modal
+          .querySelector("button")
+          .addEventListener("click", () => document.body.removeChild(overlay));
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
       });
 
-      modal.appendChild(title);
-      modal.appendChild(message);
-      modal.appendChild(closeBtn);
-      overlay.appendChild(modal);
-      document.body.appendChild(overlay);
-    });
-
-    // Function to create new thread
     document
       .getElementById("new-thread-btn")
       .addEventListener("click", function () {
@@ -431,26 +593,21 @@
             isActive: "yes",
             messages: [],
           };
-
-          // Set all other threads to inactive
           const updatedThreads = threads.map((t) => ({ ...t, isActive: "no" }));
           updatedThreads.push(newThread);
-
           chrome.storage.local.set({ threads: updatedThreads }, function () {
-            console.log("New thread created:", newThread);
             renderThreads();
             renderChatMessages(id);
           });
         });
       });
 
-    // Function to render chat messages for a specific thread
     function renderChatMessages(activeThreadId) {
       chrome.storage.local.get({ chats: [] }, function (result) {
         const chatDisplay = document.getElementById("chat-display");
         const wasTyping =
           document.getElementById("typing-notification") !== null;
-        chatDisplay.innerHTML = ""; // Clear existing content
+        chatDisplay.innerHTML = "";
 
         const threadChats = result.chats.filter(
           (chat) => chat.threadId === activeThreadId,
@@ -460,7 +617,7 @@
           const messageElement = document.createElement("div");
           messageElement.style.display = "flex";
           messageElement.style.alignItems = "flex-start";
-          messageElement.style.marginBottom = "10px";
+          messageElement.style.marginBottom = "12px";
 
           const bubbleContainer = document.createElement("div");
           bubbleContainer.style.maxWidth = "70%";
@@ -468,33 +625,35 @@
           bubbleContainer.style.flexDirection = "column";
 
           const messageBubble = document.createElement("div");
-          messageBubble.style.padding = "10px 15px";
+          messageBubble.style.padding = "12px 16px";
           messageBubble.style.borderRadius =
-            chat.role === "user" ? "15px 15px 0 15px" : "15px 15px 15px 0";
+            chat.role === "user" ? "12px 12px 0 12px" : "12px 12px 12px 0";
           messageBubble.style.wordBreak = "break-word";
+          messageBubble.style.fontSize = "0.95rem";
+          messageBubble.style.lineHeight = "1.5";
           messageBubble.textContent = chat.text;
 
           const timestamp = document.createElement("div");
-          timestamp.style.fontSize = "12px";
-          timestamp.style.color = "#555";
-          timestamp.style.marginTop = "5px";
+          timestamp.style.fontSize = "0.75rem";
+          timestamp.style.color = "#64748b";
+          timestamp.style.marginTop = "4px";
           timestamp.textContent = new Date(chat.date).toLocaleString();
 
           const iconContainer = document.createElement("div");
           iconContainer.style.margin =
-            chat.role === "user" ? "0 0 0 10px" : "0 10px 0 0";
+            chat.role === "user" ? "0 0 0 12px" : "0 12px 0 0";
 
           if (chat.role === "user") {
             messageElement.style.justifyContent = "flex-end";
             bubbleContainer.style.alignItems = "flex-end";
-            messageBubble.style.backgroundColor = "#007bff";
-            messageBubble.style.color = "white";
+            messageBubble.style.background = "#2563eb";
+            messageBubble.style.color = "#ffffff";
             iconContainer.innerHTML = userIcon;
           } else {
             messageElement.style.justifyContent = "flex-start";
             bubbleContainer.style.alignItems = "flex-start";
-            messageBubble.style.backgroundColor = "#e5e7eb";
-            messageBubble.style.color = "#1f2937";
+            messageBubble.style.background = "#e5e7eb";
+            messageBubble.style.color = "#1e293b";
             iconContainer.innerHTML = aiIcon;
           }
 
@@ -509,42 +668,30 @@
           chatDisplay.appendChild(messageElement);
         });
 
-        // Only re-add typing notification if the last message is from the user and typing was active
         if (
           wasTyping &&
           threadChats.length > 0 &&
           threadChats[threadChats.length - 1].role === "user"
         ) {
-          console.log(
-            "Re-adding typing notification for thread:",
-            activeThreadId,
-          );
           showTypingNotification(chatDisplay);
         } else {
-          console.log(
-            "Not showing typing notification: last message is AI or thread is empty for thread:",
-            activeThreadId,
-          );
           hideTypingNotification();
         }
 
-        // Auto-scroll to the latest message
         chatDisplay.scrollTop = chatDisplay.scrollHeight;
       });
     }
 
     function showTypingNotification(chatDisplay) {
-      console.log("Showing typing notification at", new Date().toISOString());
-      hideTypingNotification(); // Remove any existing typing notification
-
+      hideTypingNotification();
       const typingElement = document.createElement("div");
       typingElement.id = "typing-notification";
       typingElement.style.display = "flex";
       typingElement.style.alignItems = "flex-start";
       typingElement.style.justifyContent = "flex-start";
-      typingElement.style.marginBottom = "10px";
+      typingElement.style.marginBottom = "12px";
       typingElement.style.opacity = "0";
-      typingElement.style.transition = "opacity 0.3s ease-in-out";
+      typingElement.style.transition = "opacity 0.3s ease";
 
       const bubbleContainer = document.createElement("div");
       bubbleContainer.style.maxWidth = "70%";
@@ -553,11 +700,11 @@
       bubbleContainer.style.alignItems = "flex-start";
 
       const typingBubble = document.createElement("div");
-      typingBubble.style.backgroundColor = "#e5e7eb";
-      typingBubble.style.color = "#1f2937";
-      typingBubble.style.padding = "10px 15px";
-      typingBubble.style.borderRadius = "15px 15px 15px 0";
-      typingBubble.style.wordBreak = "break-word";
+      typingBubble.style.background = "#e5e7eb";
+      typingBubble.style.color = "#1e293b";
+      typingBubble.style.padding = "12px 16px";
+      typingBubble.style.borderRadius = "12px 12px 12px 0";
+      typingBubble.style.fontSize = "0.95rem";
       typingBubble.style.display = "flex";
       typingBubble.style.alignItems = "center";
       typingBubble.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.1)";
@@ -565,27 +712,27 @@
 
       const style = document.createElement("style");
       style.textContent = `
-    .typing-dots {
-      display: inline-block;
-      width: 20px;
-      text-align: left;
-    }
-    .typing-dots::after {
-      content: '...';
-      display: inline-block;
-      animation: dots 1.5s steps(5, end) infinite;
-    }
-    @keyframes dots {
-      0%, 20% { content: '.'; }
-      40% { content: '..'; }
-      60% { content: '...'; }
-      80%, 100% { content: ''; }
-    }
-  `;
+        .typing-dots {
+          display: inline-block;
+          width: 24px;
+          text-align: left;
+        }
+        .typing-dots::after {
+          content: '...';
+          display: inline-block;
+          animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+          0%, 20% { content: '.'; }
+          40% { content: '..'; }
+          60% { content: '...'; }
+          80%, 100% { content: ''; }
+        }
+      `;
       document.head.appendChild(style);
 
       const iconContainer = document.createElement("div");
-      iconContainer.style.marginRight = "10px";
+      iconContainer.style.marginRight = "12px";
       iconContainer.innerHTML = aiIcon;
 
       bubbleContainer.appendChild(typingBubble);
@@ -593,7 +740,6 @@
       typingElement.appendChild(bubbleContainer);
       chatDisplay.appendChild(typingElement);
 
-      // Trigger fade-in animation
       setTimeout(() => {
         typingElement.style.opacity = "1";
       }, 10);
@@ -604,36 +750,26 @@
     function hideTypingNotification() {
       const typingElement = document.getElementById("typing-notification");
       if (typingElement) {
-        console.log("Hiding typing notification at", new Date().toISOString());
         typingElement.style.opacity = "0";
-        setTimeout(() => typingElement.remove(), 300); // Match transition duration
+        setTimeout(() => typingElement.remove(), 300);
       }
     }
 
-    // Initial render of threads
     renderThreads();
-
-    // Initial render of threads and ensure active thread
     chrome.storage.local.get({ threads: [] }, function (result) {
       let threads = result.threads;
-
-      // Sort threads by creation date (newest first)
       threads = threads.sort((a, b) => b.created - a.created);
-
-      // Ensure at least one thread is active
       const hasActiveThread = threads.some((t) => t.isActive === "yes");
       if (!hasActiveThread && threads.length > 0) {
         threads = threads.map((t, index) => ({
           ...t,
-          isActive: index === 0 ? "yes" : "no", // Set newest thread as active
+          isActive: index === 0 ? "yes" : "no",
         }));
         chrome.storage.local.set({ threads: threads }, () => {
-          console.log("Set newest thread as active:", threads[0]);
           renderThreads();
           renderChatMessages(threads[0].id);
         });
       } else if (threads.length === 0) {
-        // Create a new thread if none exist
         const newThread = {
           id: "thread_" + Date.now(),
           name: "Thread 1",
@@ -654,7 +790,6 @@
 
     const customAIInput = document.getElementById("custom-ai-input");
 
-    // Auto-save on reload if input is pre-filled
     if (customAIInput.value.trim()) {
       const inputText = customAIInput.value.trim();
       const timestamp = new Date().toISOString();
@@ -665,7 +800,7 @@
         async function (result) {
           const chats = result.chats;
           const activeThread = result.threads.find((t) => t.isActive === "yes");
-          if (!activeThread) return; // No active thread, skip saving
+          if (!activeThread) return;
 
           const recentUserMessages = chats
             .slice(-5)
@@ -687,25 +822,17 @@
               threadId: activeThread.id,
             };
             chats.push(userMessage);
-
-            // Clear input immediately
             customAIInput.value = "";
-
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
-                console.log("Auto-saved input after reload:", inputText);
                 renderChatMessages(activeThread.id);
                 resolve();
               });
             });
-
-            // Show typing notification with minimum duration
             showTypingNotification(chatDisplay);
             const minTypingDuration = new Promise((resolve) =>
               setTimeout(resolve, 500),
             );
-
-            // Send user message to API
             try {
               const [aiResponse] = await Promise.all([
                 sendToApi(inputText),
@@ -718,9 +845,7 @@
                 threadId: activeThread.id,
               };
               chats.push(aiMessage);
-
               chrome.storage.local.set({ chats: chats }, () => {
-                console.log("AI response saved:", aiResponse);
                 hideTypingNotification();
                 renderChatMessages(activeThread.id);
               });
@@ -739,14 +864,12 @@
               });
             }
           } else {
-            console.log("Duplicate detected:", inputText);
             customAIInput.value = "";
           }
         },
       );
     }
 
-    // Handle Enter key to save and display new messages
     customAIInput.addEventListener("keydown", async function (event) {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -763,9 +886,8 @@
             const activeThread = result.threads.find(
               (t) => t.isActive === "yes",
             );
-            if (!activeThread) return; // No active thread, skip saving
+            if (!activeThread) return;
 
-            // Save user message
             const userMessage = {
               text: inputText,
               date: timestamp,
@@ -773,26 +895,17 @@
               threadId: activeThread.id,
             };
             chats.push(userMessage);
-
-            // Clear input immediately
             customAIInput.value = "";
-
-            // Update storage with user message and re-render
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
-                console.log("User message saved:", inputText);
                 renderChatMessages(activeThread.id);
                 resolve();
               });
             });
-
-            // Show typing notification with minimum duration
             showTypingNotification(chatDisplay);
             const minTypingDuration = new Promise((resolve) =>
               setTimeout(resolve, 500),
             );
-
-            // Send user message to API
             try {
               const [aiResponse] = await Promise.all([
                 sendToApi(inputText),
@@ -805,10 +918,7 @@
                 threadId: activeThread.id,
               };
               chats.push(aiMessage);
-
-              // Update storage with AI response and re-render
               chrome.storage.local.set({ chats: chats }, () => {
-                console.log("AI response saved:", aiResponse);
                 hideTypingNotification();
                 renderChatMessages(activeThread.id);
               });
@@ -831,21 +941,14 @@
       }
     });
 
-    // Adjust threads container height on window resize
     window.addEventListener("resize", adjustThreadsContainerHeight);
   }
 
   async function sendToApi(text) {
     const payload = {
       model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "user",
-          content: text,
-        },
-      ],
+      messages: [{ role: "user", content: text }],
     };
-
     try {
       const res = await fetch("http://127.0.0.1:8000/api/chat", {
         method: "POST",
@@ -855,17 +958,10 @@
         },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
+      if (!res.ok)
         throw new Error(`API error: ${res.status} ${res.statusText}`);
-      }
-
       const data = await res.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
+      if (data.error) throw new Error(data.error);
       return data.response || "Keine Antwort erhalten.";
     } catch (error) {
       console.error("API Error:", error);
@@ -875,25 +971,19 @@
 
   function init() {
     const targetDiv = document.getElementById("appbar");
-    if (targetDiv) {
-      createUI(targetDiv);
-    }
+    if (targetDiv) createUI(targetDiv);
   }
 
   const observer = new MutationObserver(() => {
     const targetDiv = document.getElementById("appbar");
-    if (targetDiv && !document.getElementById(CONTAINER_ID)) {
+    if (targetDiv && !document.getElementById(CONTAINER_ID))
       createUI(targetDiv);
-    }
   });
 
   window.addEventListener("load", () => {
     const body = document.body;
     if (body) {
-      observer.observe(body, {
-        childList: true,
-        subtree: true,
-      });
+      observer.observe(body, { childList: true, subtree: true });
       init();
     }
   });
