@@ -10,10 +10,16 @@
 
   // SVG icon for AI
 const aiIcon = `
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM10 17H14V15H10V17ZM10 13H14V11H10V13ZM10 9H14V7H10V9Z" fill="#555"/>
-  </svg>
+<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="24" height="24" rx="12" fill="#E0F7FA"/>
+  <path d="M12 2C12.55 2 13 2.45 13 3V4H11V3C11 2.45 11.45 2 12 2Z" fill="#607D8B"/>
+  <circle cx="12" cy="12" r="6" fill="white" stroke="#607D8B" stroke-width="2"/>
+  <circle cx="9.5" cy="11.5" r="1.5" fill="#607D8B"/>
+  <circle cx="14.5" cy="11.5" r="1.5" fill="#607D8B"/>
+  <path d="M9 15C9.5 15.5 10.7 16 12 16C13.3 16 14.5 15.5 15 15" stroke="#607D8B" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
 `;
+
 
   function createUI(targetDiv) {
     // Prevent duplicate injection
@@ -279,6 +285,138 @@ const aiIcon = `
         adjustThreadsContainerHeight();
       });
     }
+
+    // Report Bug | Get Help | Privacy Policy
+    const reportBtn = document.getElementById("report-bug-btn");
+
+    reportBtn.addEventListener("click", function() {
+      window.open(
+        "https://docs.google.com/forms/d/e/1FAIpQLScSfquZW5idQXGsCHXc-OlMaa97eh_1i9BnmMf7Ea9HVSFQzg/viewform?usp=sharing&ouid=107403711423930702162",
+        "_blank"
+      );
+    });
+
+    const getHelpBtn = document.getElementById("get-help-btn");
+    getHelpBtn.addEventListener("click", function () {
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100vw";
+      overlay.style.height = "100vh";
+      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.zIndex = "1000";
+
+      const modal = document.createElement("div");
+      modal.style.backgroundColor = "#fff";
+      modal.style.padding = "20px";
+      modal.style.borderRadius = "8px";
+      modal.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.3)";
+      modal.style.maxWidth = "400px";
+      modal.style.textAlign = "center";
+      modal.style.fontFamily = "sans-serif";
+      modal.style.color = "black";
+
+      const title = document.createElement("h2");
+      title.textContent = "How we can help";
+      const message = document.createElement("p");
+      message.innerHTML = `
+        <strong>Welcome to your AI-powered Sidebar!</strong><br/><br/>
+        Here's how this tool can help you be more productive every day:
+        <ul style="text-align:left; margin:1em 0; padding-left: 1em;">
+          <li><strong>🔍 Google Integration:</strong> Just type something into Google – the AI will detect your query and instantly provide a helpful answer.</li>
+          <li><strong>💬 Chat History:</strong> All your conversations are saved in threads, so you can return to them anytime or continue where you left off.</li>
+          <li><strong>🧠 Context Awareness:</strong> The AI remembers the conversation context per thread. The longer the thread, the smarter the answers.</li>
+          <li><strong>✏️ Rename & 🗑 Delete:</strong> Organize your chats with custom titles – or remove old threads when you no longer need them.</li>
+          <li><strong>📌 Autoscroll & Scroll Button:</strong> Never miss a new message – or jump to the latest response with a single click.</li>
+        </ul>
+        <p style="font-size:14px; color:#555;">
+          👉 Tip: Use this sidebar daily to get quick answers, make better decisions, or brainstorm ideas – all right next to your search results.
+        </p>
+      `;
+
+      const closeBtn = document.createElement("button");
+      closeBtn.textContent = "Schließen";
+      closeBtn.style.marginTop = "15px";
+      closeBtn.style.padding = "8px 16px";
+      closeBtn.style.cursor = "pointer";
+      closeBtn.addEventListener("click", function () {
+        document.body.removeChild(overlay);
+      });
+
+      modal.appendChild(title);
+      modal.appendChild(message);
+      modal.appendChild(closeBtn);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    });
+
+    const getPPBtn = document.getElementById("privacy-policy-btn");
+
+    getPPBtn.addEventListener("click", function () {
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = "100vw";
+      overlay.style.height = "100vh";
+      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.zIndex = "1000";
+
+      const modal = document.createElement("div");
+      modal.style.backgroundColor = "#fff";
+      modal.style.padding = "20px";
+      modal.style.borderRadius = "8px";
+      modal.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.3)";
+      modal.style.maxWidth = "500px";
+      modal.style.textAlign = "left";
+      modal.style.fontFamily = "sans-serif";
+      modal.style.color = "black";
+      modal.style.maxHeight = "80vh";
+      modal.style.overflowY = "auto";
+
+      const title = document.createElement("h2");
+      title.textContent = "Privacy Policy";
+
+      const message = document.createElement("div");
+      message.innerHTML = `
+        <p>
+          Your privacy is important to us. This tool stores your chat threads locally in your browser using Chrome's extension storage.
+        </p>
+        <ul style="margin:1em 0; padding-left: 1.2em;">
+          <li><strong>📁 Local Storage:</strong> All messages and threads are saved only on your device. We do not collect or transmit personal data.</li>
+          <li><strong>🔐 No Tracking:</strong> This extension does not include analytics, trackers, or ads.</li>
+          <li><strong>🧠 Context Handling:</strong> Your messages are used solely to provide better contextual responses. They are not shared.</li>
+          <li><strong>📤 API Requests:</strong> Messages are sent to your self-hosted API endpoint, if configured. Ensure it complies with your privacy requirements.</li>
+          <li><strong>🗑 Easy Data Removal:</strong> You can clear all stored data anytime via the "Clear All" button.</li>
+        </ul>
+        <p style="font-size:14px; color:#555;">
+          By using this extension, you agree to local-only data handling and understand that your privacy is protected by design.
+        </p>
+      `;
+
+      const closeBtn = document.createElement("button");
+      closeBtn.textContent = "Close";
+      closeBtn.style.marginTop = "15px";
+      closeBtn.style.padding = "8px 16px";
+      closeBtn.style.cursor = "pointer";
+
+      closeBtn.addEventListener("click", function () {
+        document.body.removeChild(overlay);
+      });
+
+      modal.appendChild(title);
+      modal.appendChild(message);
+      modal.appendChild(closeBtn);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    });
 
     // Function to create new thread
     document
