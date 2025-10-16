@@ -9,7 +9,7 @@
   `;
 
   // SVG icon for AI
-const aiIcon = `
+  const aiIcon = `
 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="24" height="24" rx="12" fill="#E0F7FA"/>
   <path d="M12 2C12.55 2 13 2.45 13 3V4H11V3C11 2.45 11.45 2 12 2Z" fill="#607D8B"/>
@@ -19,7 +19,6 @@ const aiIcon = `
   <path d="M9 15C9.5 15.5 10.7 16 12 16C13.3 16 14.5 15.5 15 15" stroke="#607D8B" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 `;
-
 
   function createUI(targetDiv) {
     // Prevent duplicate injection
@@ -289,10 +288,10 @@ const aiIcon = `
     // Report Bug | Get Help | Privacy Policy
     const reportBtn = document.getElementById("report-bug-btn");
 
-    reportBtn.addEventListener("click", function() {
+    reportBtn.addEventListener("click", function () {
       window.open(
         "https://docs.google.com/forms/d/e/1FAIpQLScSfquZW5idQXGsCHXc-OlMaa97eh_1i9BnmMf7Ea9HVSFQzg/viewform?usp=sharing&ouid=107403711423930702162",
-        "_blank"
+        "_blank",
       );
     });
 
@@ -447,105 +446,169 @@ const aiIcon = `
 
     // Function to render chat messages for a specific thread
     function renderChatMessages(activeThreadId) {
-  chrome.storage.local.get({ chats: [] }, function (result) {
-    const chatDisplay = document.getElementById("chat-display");
-    chatDisplay.innerHTML = ""; // Clear existing content
+      chrome.storage.local.get({ chats: [] }, function (result) {
+        const chatDisplay = document.getElementById("chat-display");
+        const wasTyping =
+          document.getElementById("typing-notification") !== null;
+        chatDisplay.innerHTML = ""; // Clear existing content
 
-    const threadChats = result.chats.filter(
-      (chat) => chat.threadId === activeThreadId
-    );
+        const threadChats = result.chats.filter(
+          (chat) => chat.threadId === activeThreadId,
+        );
 
-    threadChats.forEach((chat) => {
-      const messageElement = document.createElement("div");
-      messageElement.style.display = "flex";
-      messageElement.style.alignItems = "flex-start";
-      messageElement.style.marginBottom = "10px";
+        threadChats.forEach((chat) => {
+          const messageElement = document.createElement("div");
+          messageElement.style.display = "flex";
+          messageElement.style.alignItems = "flex-start";
+          messageElement.style.marginBottom = "10px";
+
+          const bubbleContainer = document.createElement("div");
+          bubbleContainer.style.maxWidth = "70%";
+          bubbleContainer.style.display = "flex";
+          bubbleContainer.style.flexDirection = "column";
+
+          const messageBubble = document.createElement("div");
+          messageBubble.style.padding = "10px 15px";
+          messageBubble.style.borderRadius =
+            chat.role === "user" ? "15px 15px 0 15px" : "15px 15px 15px 0";
+          messageBubble.style.wordBreak = "break-word";
+          messageBubble.textContent = chat.text;
+
+          const timestamp = document.createElement("div");
+          timestamp.style.fontSize = "12px";
+          timestamp.style.color = "#555";
+          timestamp.style.marginTop = "5px";
+          timestamp.textContent = new Date(chat.date).toLocaleString();
+
+          const iconContainer = document.createElement("div");
+          iconContainer.style.margin =
+            chat.role === "user" ? "0 0 0 10px" : "0 10px 0 0";
+
+          if (chat.role === "user") {
+            messageElement.style.justifyContent = "flex-end";
+            bubbleContainer.style.alignItems = "flex-end";
+            messageBubble.style.backgroundColor = "#007bff";
+            messageBubble.style.color = "white";
+            iconContainer.innerHTML = userIcon;
+          } else {
+            messageElement.style.justifyContent = "flex-start";
+            bubbleContainer.style.alignItems = "flex-start";
+            messageBubble.style.backgroundColor = "#e5e7eb";
+            messageBubble.style.color = "#1f2937";
+            iconContainer.innerHTML = aiIcon;
+          }
+
+          bubbleContainer.appendChild(messageBubble);
+          bubbleContainer.appendChild(timestamp);
+          messageElement.appendChild(
+            chat.role === "user" ? bubbleContainer : iconContainer,
+          );
+          messageElement.appendChild(
+            chat.role === "user" ? iconContainer : bubbleContainer,
+          );
+          chatDisplay.appendChild(messageElement);
+        });
+
+        // Only re-add typing notification if the last message is from the user and typing was active
+        if (
+          wasTyping &&
+          threadChats.length > 0 &&
+          threadChats[threadChats.length - 1].role === "user"
+        ) {
+          console.log(
+            "Re-adding typing notification for thread:",
+            activeThreadId,
+          );
+          showTypingNotification(chatDisplay);
+        } else {
+          console.log(
+            "Not showing typing notification: last message is AI or thread is empty for thread:",
+            activeThreadId,
+          );
+          hideTypingNotification();
+        }
+
+        // Auto-scroll to the latest message
+        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+      });
+    }
+
+    function showTypingNotification(chatDisplay) {
+      console.log("Showing typing notification at", new Date().toISOString());
+      hideTypingNotification(); // Remove any existing typing notification
+
+      const typingElement = document.createElement("div");
+      typingElement.id = "typing-notification";
+      typingElement.style.display = "flex";
+      typingElement.style.alignItems = "flex-start";
+      typingElement.style.justifyContent = "flex-start";
+      typingElement.style.marginBottom = "10px";
+      typingElement.style.opacity = "0";
+      typingElement.style.transition = "opacity 0.3s ease-in-out";
 
       const bubbleContainer = document.createElement("div");
       bubbleContainer.style.maxWidth = "70%";
       bubbleContainer.style.display = "flex";
       bubbleContainer.style.flexDirection = "column";
+      bubbleContainer.style.alignItems = "flex-start";
 
-      const messageBubble = document.createElement("div");
-      messageBubble.style.padding = "10px 15px";
-      messageBubble.style.borderRadius = chat.role === "user" ? "15px 15px 0 15px" : "15px 15px 15px 0";
-      messageBubble.style.wordBreak = "break-word";
-      messageBubble.textContent = chat.text;
+      const typingBubble = document.createElement("div");
+      typingBubble.style.backgroundColor = "#e5e7eb";
+      typingBubble.style.color = "#1f2937";
+      typingBubble.style.padding = "10px 15px";
+      typingBubble.style.borderRadius = "15px 15px 15px 0";
+      typingBubble.style.wordBreak = "break-word";
+      typingBubble.style.display = "flex";
+      typingBubble.style.alignItems = "center";
+      typingBubble.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.1)";
+      typingBubble.innerHTML = `AI is typing <span class="typing-dots">...</span>`;
 
-      const timestamp = document.createElement("div");
-      timestamp.style.fontSize = "12px";
-      timestamp.style.color = "#555";
-      timestamp.style.marginTop = "5px";
-      timestamp.textContent = new Date(chat.date).toLocaleString();
+      const style = document.createElement("style");
+      style.textContent = `
+    .typing-dots {
+      display: inline-block;
+      width: 20px;
+      text-align: left;
+    }
+    .typing-dots::after {
+      content: '...';
+      display: inline-block;
+      animation: dots 1.5s steps(5, end) infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60% { content: '...'; }
+      80%, 100% { content: ''; }
+    }
+  `;
+      document.head.appendChild(style);
 
       const iconContainer = document.createElement("div");
-      iconContainer.style.margin = chat.role === "user" ? "0 0 0 10px" : "0 10px 0 0";
+      iconContainer.style.marginRight = "10px";
+      iconContainer.innerHTML = aiIcon;
 
-      if (chat.role === "user") {
-        messageElement.style.justifyContent = "flex-end";
-        bubbleContainer.style.alignItems = "flex-end";
-        messageBubble.style.backgroundColor = "#007bff";
-        messageBubble.style.color = "white";
-        iconContainer.innerHTML = userIcon;
-      } else {
-        messageElement.style.justifyContent = "flex-start";
-        bubbleContainer.style.alignItems = "flex-start";
-        messageBubble.style.backgroundColor = "#e5e7eb";
-        messageBubble.style.color = "#1f2937";
-        iconContainer.innerHTML = aiIcon;
+      bubbleContainer.appendChild(typingBubble);
+      typingElement.appendChild(iconContainer);
+      typingElement.appendChild(bubbleContainer);
+      chatDisplay.appendChild(typingElement);
+
+      // Trigger fade-in animation
+      setTimeout(() => {
+        typingElement.style.opacity = "1";
+      }, 10);
+
+      chatDisplay.scrollTop = chatDisplay.scrollHeight;
+    }
+
+    function hideTypingNotification() {
+      const typingElement = document.getElementById("typing-notification");
+      if (typingElement) {
+        console.log("Hiding typing notification at", new Date().toISOString());
+        typingElement.style.opacity = "0";
+        setTimeout(() => typingElement.remove(), 300); // Match transition duration
       }
-
-      bubbleContainer.appendChild(messageBubble);
-      bubbleContainer.appendChild(timestamp);
-      messageElement.appendChild(chat.role === "user" ? bubbleContainer : iconContainer);
-      messageElement.appendChild(chat.role === "user" ? iconContainer : bubbleContainer);
-      chatDisplay.appendChild(messageElement);
-    });
-
-    // Auto-scroll to the latest message
-    chatDisplay.scrollTop = chatDisplay.scrollHeight;
-  });
-}
-
-function showTypingNotification(chatDisplay) {
-  const typingElement = document.createElement("div");
-  typingElement.id = "typing-notification";
-  typingElement.style.display = "flex";
-  typingElement.style.alignItems = "flex-start";
-  typingElement.style.justifyContent = "flex-start";
-  typingElement.style.marginBottom = "10px";
-
-  const bubbleContainer = document.createElement("div");
-  bubbleContainer.style.maxWidth = "70%";
-  bubbleContainer.style.display = "flex";
-  bubbleContainer.style.flexDirection = "column";
-  bubbleContainer.style.alignItems = "flex-start";
-
-  const typingBubble = document.createElement("div");
-  typingBubble.style.backgroundColor = "#e5e7eb";
-  typingBubble.style.color = "#1f2937";
-  typingBubble.style.padding = "10px 15px";
-  typingBubble.style.borderRadius = "15px 15px 15px 0";
-  typingBubble.style.wordBreak = "break-word";
-  typingBubble.textContent = "AI is typing...";
-
-  const iconContainer = document.createElement("div");
-  iconContainer.style.marginRight = "10px";
-  iconContainer.innerHTML = aiIcon;
-
-  bubbleContainer.appendChild(typingBubble);
-  typingElement.appendChild(iconContainer);
-  typingElement.appendChild(bubbleContainer);
-  chatDisplay.appendChild(typingElement);
-  chatDisplay.scrollTop = chatDisplay.scrollHeight;
-}
-
-function hideTypingNotification() {
-  const typingElement = document.getElementById("typing-notification");
-  if (typingElement) {
-    typingElement.remove();
-  }
-}
+    }
 
     // Initial render of threads
     renderThreads();
@@ -593,152 +656,180 @@ function hideTypingNotification() {
 
     // Auto-save on reload if input is pre-filled
     if (customAIInput.value.trim()) {
-  const inputText = customAIInput.value.trim();
-  const timestamp = new Date().toISOString();
-  const chatDisplay = document.getElementById("chat-display");
+      const inputText = customAIInput.value.trim();
+      const timestamp = new Date().toISOString();
+      const chatDisplay = document.getElementById("chat-display");
 
-  chrome.storage.local.get({ chats: [], threads: [] }, async function (result) {
-    const chats = result.chats;
-    const activeThread = result.threads.find((t) => t.isActive === "yes");
-    if (!activeThread) return; // No active thread, skip saving
+      chrome.storage.local.get(
+        { chats: [], threads: [] },
+        async function (result) {
+          const chats = result.chats;
+          const activeThread = result.threads.find((t) => t.isActive === "yes");
+          if (!activeThread) return; // No active thread, skip saving
 
-    const recentUserMessages = chats
-      .slice(-5)
-      .filter((entry) => entry.role === "user" && entry.threadId === activeThread.id)
-      .slice(-5);
+          const recentUserMessages = chats
+            .slice(-5)
+            .filter(
+              (entry) =>
+                entry.role === "user" && entry.threadId === activeThread.id,
+            )
+            .slice(-5);
 
-    const isDuplicate = recentUserMessages.some((entry) => entry.text === inputText);
+          const isDuplicate = recentUserMessages.some(
+            (entry) => entry.text === inputText,
+          );
 
-    if (!isDuplicate) {
-      const userMessage = {
-        text: inputText,
-        date: timestamp,
-        role: "user",
-        threadId: activeThread.id,
-      };
-      chats.push(userMessage);
+          if (!isDuplicate) {
+            const userMessage = {
+              text: inputText,
+              date: timestamp,
+              role: "user",
+              threadId: activeThread.id,
+            };
+            chats.push(userMessage);
 
-      await new Promise((resolve) => {
-        chrome.storage.local.set({ chats: chats }, () => {
-          console.log("Auto-saved input after reload:", inputText);
-          renderChatMessages(activeThread.id);
-          resolve();
-        });
-      });
+            // Clear input immediately
+            customAIInput.value = "";
 
-      // Show typing notification
-      showTypingNotification(chatDisplay);
+            await new Promise((resolve) => {
+              chrome.storage.local.set({ chats: chats }, () => {
+                console.log("Auto-saved input after reload:", inputText);
+                renderChatMessages(activeThread.id);
+                resolve();
+              });
+            });
 
-      customAIInput.value = "";
+            // Show typing notification with minimum duration
+            showTypingNotification(chatDisplay);
+            const minTypingDuration = new Promise((resolve) =>
+              setTimeout(resolve, 500),
+            );
 
-      // Send user message to API
-      try {
-        const aiResponse = await sendToApi(inputText);
-        const aiMessage = {
-          text: aiResponse,
-          date: new Date().toISOString(),
-          role: "ai",
-          threadId: activeThread.id,
-        };
-        chats.push(aiMessage);
+            // Send user message to API
+            try {
+              const [aiResponse] = await Promise.all([
+                sendToApi(inputText),
+                minTypingDuration,
+              ]);
+              const aiMessage = {
+                text: aiResponse,
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(aiMessage);
 
-        chrome.storage.local.set({ chats: chats }, () => {
-          console.log("AI response saved:", aiResponse);
-          hideTypingNotification();
-          renderChatMessages(activeThread.id);
-        });
-      } catch (error) {
-        console.error("Failed to get AI response:", error);
-        hideTypingNotification();
-        const errorMessage = {
-          text: "Error: Could not get AI response.",
-          date: new Date().toISOString(),
-          role: "ai",
-          threadId: activeThread.id,
-        };
-        chats.push(errorMessage);
-        chrome.storage.local.set({ chats: chats }, () => {
-          renderChatMessages(activeThread.id);
-        });
-      }
-    } else {
-      console.log("Duplicate detected:", inputText);
+              chrome.storage.local.set({ chats: chats }, () => {
+                console.log("AI response saved:", aiResponse);
+                hideTypingNotification();
+                renderChatMessages(activeThread.id);
+              });
+            } catch (error) {
+              console.error("Failed to get AI response:", error);
+              hideTypingNotification();
+              const errorMessage = {
+                text: "Error: Could not get AI response.",
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(errorMessage);
+              chrome.storage.local.set({ chats: chats }, () => {
+                renderChatMessages(activeThread.id);
+              });
+            }
+          } else {
+            console.log("Duplicate detected:", inputText);
+            customAIInput.value = "";
+          }
+        },
+      );
     }
-  });
-}
 
     // Handle Enter key to save and display new messages
     customAIInput.addEventListener("keydown", async function (event) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    const inputText = customAIInput.value.trim();
-    if (!inputText) return;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const inputText = customAIInput.value.trim();
+        if (!inputText) return;
 
-    const timestamp = new Date().toISOString();
-    const chatDisplay = document.getElementById("chat-display");
+        const timestamp = new Date().toISOString();
+        const chatDisplay = document.getElementById("chat-display");
 
-    chrome.storage.local.get({ chats: [], threads: [] }, async function (result) {
-      const chats = result.chats;
-      const activeThread = result.threads.find((t) => t.isActive === "yes");
-      if (!activeThread) return; // No active thread, skip saving
+        chrome.storage.local.get(
+          { chats: [], threads: [] },
+          async function (result) {
+            const chats = result.chats;
+            const activeThread = result.threads.find(
+              (t) => t.isActive === "yes",
+            );
+            if (!activeThread) return; // No active thread, skip saving
 
-      // Save user message
-      const userMessage = {
-        text: inputText,
-        date: timestamp,
-        role: "user",
-        threadId: activeThread.id,
-      };
-      chats.push(userMessage);
+            // Save user message
+            const userMessage = {
+              text: inputText,
+              date: timestamp,
+              role: "user",
+              threadId: activeThread.id,
+            };
+            chats.push(userMessage);
 
-      // Update storage with user message and re-render
-      await new Promise((resolve) => {
-        chrome.storage.local.set({ chats: chats }, () => {
-          console.log("User message saved:", inputText);
-          renderChatMessages(activeThread.id);
-          resolve();
-        });
-      });
+            // Clear input immediately
+            customAIInput.value = "";
 
-      // Show typing notification
-      showTypingNotification(chatDisplay);
+            // Update storage with user message and re-render
+            await new Promise((resolve) => {
+              chrome.storage.local.set({ chats: chats }, () => {
+                console.log("User message saved:", inputText);
+                renderChatMessages(activeThread.id);
+                resolve();
+              });
+            });
 
-      // Send user message to API
-      try {
-        const aiResponse = await sendToApi(inputText);
-        const aiMessage = {
-          text: aiResponse,
-          date: new Date().toISOString(),
-          role: "ai",
-          threadId: activeThread.id,
-        };
-        chats.push(aiMessage);
+            // Show typing notification with minimum duration
+            showTypingNotification(chatDisplay);
+            const minTypingDuration = new Promise((resolve) =>
+              setTimeout(resolve, 500),
+            );
 
-        // Update storage with AI response and re-render
-        chrome.storage.local.set({ chats: chats }, () => {
-          console.log("AI response saved:", aiResponse);
-          hideTypingNotification();
-          renderChatMessages(activeThread.id);
-        });
-      } catch (error) {
-        console.error("Failed to get AI response:", error);
-        hideTypingNotification();
-        const errorMessage = {
-          text: "Error: Could not get AI response.",
-          date: new Date().toISOString(),
-          role: "ai",
-          threadId: activeThread.id,
-        };
-        chats.push(errorMessage);
-        chrome.storage.local.set({ chats: chats }, () => {
-          renderChatMessages(activeThread.id);
-        });
+            // Send user message to API
+            try {
+              const [aiResponse] = await Promise.all([
+                sendToApi(inputText),
+                minTypingDuration,
+              ]);
+              const aiMessage = {
+                text: aiResponse,
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(aiMessage);
+
+              // Update storage with AI response and re-render
+              chrome.storage.local.set({ chats: chats }, () => {
+                console.log("AI response saved:", aiResponse);
+                hideTypingNotification();
+                renderChatMessages(activeThread.id);
+              });
+            } catch (error) {
+              console.error("Failed to get AI response:", error);
+              hideTypingNotification();
+              const errorMessage = {
+                text: "Error: Could not get AI response.",
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(errorMessage);
+              chrome.storage.local.set({ chats: chats }, () => {
+                renderChatMessages(activeThread.id);
+              });
+            }
+          },
+        );
       }
     });
-
-    customAIInput.value = "";
-  }
-});
 
     // Adjust threads container height on window resize
     window.addEventListener("resize", adjustThreadsContainerHeight);
