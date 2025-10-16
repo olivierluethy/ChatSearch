@@ -56,32 +56,51 @@
 
     const customAIInput = document.getElementById("custom-ai-input");
 
+    // ✅ AUTO-SAVE on reload if input is pre-filled
+    if (customAIInput.value.trim()) {
+      const inputText = customAIInput.value.trim();
+      const timestamp = new Date().toISOString();
+
+      chrome.storage.local.get({ chats: [] }, function (result) {
+        const chats = result.chats;
+
+        chats.push({
+          text: inputText,
+          date: timestamp,
+        });
+
+        chrome.storage.local.set({ chats: chats }, function () {
+          console.log("Auto-saved input after reload:", inputText);
+          console.log("Gespeicherter Verlauf:", result.chats);
+        });
+      });
+
+      customAIInput.value = ""; // clear input after saving
+    }
+
     customAIInput.addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
-        event.preventDefault(); // verhindert Zeilenumbruch
+        event.preventDefault(); // prevents newline
 
         const inputText = customAIInput.value.trim();
-        if (!inputText) return; // leere Eingaben ignorieren
+        if (!inputText) return; // ignore empty inputs
 
-        const timestamp = new Date().toISOString(); // exaktes Datum + Uhrzeit
+        const timestamp = new Date().toISOString(); // exact date + time
 
-        // Zuerst bestehenden Chatverlauf laden
         chrome.storage.local.get({ chats: [] }, function (result) {
           const chats = result.chats;
 
-          // Neue Nachricht hinzufügen
           chats.push({
             text: inputText,
             date: timestamp,
           });
 
-          // Zurück in den Storage schreiben
           chrome.storage.local.set({ chats: chats }, function () {
             console.log("Eingabe gespeichert:", inputText);
+            console.log("Gespeicherter Verlauf:", result.chats);
           });
         });
 
-        // Eingabefeld leeren
         customAIInput.value = "";
 
         chrome.storage.local.get({ chats: [] }, function (result) {
@@ -102,8 +121,6 @@
 
     const getHelpBtn = document.getElementById("get-help-btn");
     getHelpBtn.addEventListener("click", function () {
-      // Modal Overlay
-
       const overlay = document.createElement("div");
       overlay.style.position = "fixed";
       overlay.style.top = "0";
@@ -116,7 +133,6 @@
       overlay.style.justifyContent = "center";
       overlay.style.zIndex = "1000";
 
-      // Modal Container
       const modal = document.createElement("div");
       modal.style.backgroundColor = "#fff";
       modal.style.padding = "20px";
@@ -126,8 +142,6 @@
       modal.style.textAlign = "center";
       modal.style.fontFamily = "sans-serif";
       modal.style.color = "black";
-
-      // Modal Content
 
       const title = document.createElement("h2");
       title.textContent = "How we can help";
@@ -147,7 +161,6 @@
         </p>
       `;
 
-      // Close Button
       const closeBtn = document.createElement("button");
       closeBtn.textContent = "Schließen";
       closeBtn.style.marginTop = "15px";
@@ -156,7 +169,7 @@
       closeBtn.addEventListener("click", function () {
         document.body.removeChild(overlay);
       });
-      // Zusammenbauen
+
       modal.appendChild(title);
       modal.appendChild(message);
       modal.appendChild(closeBtn);
@@ -167,7 +180,6 @@
     const getPPBtn = document.getElementById("privacy-policy-btn");
 
     getPPBtn.addEventListener("click", function () {
-      // Modal Overlay
       const overlay = document.createElement("div");
       overlay.style.position = "fixed";
       overlay.style.top = "0";
@@ -180,7 +192,6 @@
       overlay.style.justifyContent = "center";
       overlay.style.zIndex = "1000";
 
-      // Modal Container
       const modal = document.createElement("div");
       modal.style.backgroundColor = "#fff";
       modal.style.padding = "20px";
@@ -193,11 +204,9 @@
       modal.style.maxHeight = "80vh";
       modal.style.overflowY = "auto";
 
-      // Modal Title
       const title = document.createElement("h2");
       title.textContent = "Privacy Policy";
 
-      // Modal Content
       const message = document.createElement("div");
       message.innerHTML = `
         <p>
@@ -215,7 +224,6 @@
         </p>
       `;
 
-      // Close Button
       const closeBtn = document.createElement("button");
       closeBtn.textContent = "Close";
       closeBtn.style.marginTop = "15px";
@@ -226,7 +234,6 @@
         document.body.removeChild(overlay);
       });
 
-      // Assemble and display modal
       modal.appendChild(title);
       modal.appendChild(message);
       modal.appendChild(closeBtn);
@@ -242,7 +249,6 @@
     }
   }
 
-  // Observe DOM changes
   const observer = new MutationObserver(() => {
     const targetDiv = document.getElementById("appbar");
     if (targetDiv && !document.getElementById(CONTAINER_ID)) {
@@ -250,7 +256,6 @@
     }
   });
 
-  // Start observing once DOM is loaded
   window.addEventListener("load", () => {
     const body = document.body;
     if (body) {
@@ -259,7 +264,6 @@
         subtree: true,
       });
 
-      // Initial injection attempt
       init();
     }
   });
