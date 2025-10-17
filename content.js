@@ -1,3 +1,46 @@
+const MEASUREMENT_ID = "G-8MTV9HMJF4";
+const API_SECRET = "__REDACTED_GA_SECRET__";
+
+window.dataLayer = window.dataLayer || [];
+function gtag() {
+  dataLayer.push(arguments);
+}
+gtag("js", new Date());
+gtag("config", "G-8MTV9HMJF4");
+
+function sendGAEvent(eventName, params = {}) {
+  const clientId = localStorage.getItem("ga_client_id") || crypto.randomUUID();
+  localStorage.setItem("ga_client_id", clientId);
+
+  fetch(
+    "https://www.google-analytics.com/mp/collect?measurement_id=G-8MTV9HMJF4&api_secret=__REDACTED_GA_SECRET__",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        events: [
+          {
+            name: eventName,
+            params: {
+              ...params,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        ],
+      }),
+    },
+  )
+    .then((res) => {
+      console.log(`[GA] Event "${eventName}" gesendet:`, res.status);
+    })
+    .catch((err) => {
+      console.error(`[GA] Fehler beim Senden des Events "${eventName}":`, err);
+    });
+}
+
 (function () {
   const CONTAINER_ID = "custom-ai-box";
 
@@ -178,49 +221,90 @@
               </svg>
               Privacy Policy
             </button>
+            <button id="feature-request-btn" style="
+              padding: 8px;
+              background: #e5e7eb;
+              color: #1e293b;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 0.85rem;
+              font-weight: 500;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              transition: background 0.2s ease;
+            ">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/>
+            </svg>
+              Feature Request
+            </button>
           </div>
         </div>
 
         <!-- Main Content Area -->
-        <div id="main-content" style="
-          flex: 1;
-          padding: 24px;
-          background: #ffffff;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        ">
-          <h2 style="
-            margin: 0;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1e293b;
-          ">Talk to AI</h2>
-          <div id="chat-display" style="
-            flex: 1;
-            max-height: 425px;
-            overflow-y: auto;
-            padding: 16px;
-            background: #f8fafc;
-            border-radius: 10px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            scrollbar-width: thin;
-            scrollbar-color: #94a3b8 #e2e8f0;
-          "></div>
-          <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" type="text" placeholder="Type your message here..." style="
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-          " />
-        </div>
+<div id="main-content" style="
+  flex: 1;
+  padding: 24px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+">
+  <h2 style="
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1e293b;
+  ">Talk to AI</h2>
+
+  <div id="chat-display" style="
+    flex: 1;
+    max-height: 425px;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #e2e8f0;
+  "></div>
+
+  <!-- Input + Button Container -->
+  <div style="
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  ">
+    <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" 
+      type="text" placeholder="Type your message here..." style="
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    " />
+
+    <button id="sendToApiBtn" style="
+      padding: 12px 20px;
+      background-color: #25D366;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+    ">Send</button>
+  </div>
       </div>
     `;
 
@@ -237,7 +321,7 @@
     }
 
     // Render threads with animation
-    function renderThreads() {
+    function renderThreads(animate = true) {
       chrome.storage.local.get({ threads: [], chats: [] }, function (result) {
         let threads = result.threads;
         const chats = result.chats;
@@ -269,9 +353,11 @@
           li.style.alignItems = "center";
           li.style.gap = "8px";
           li.style.transition = "background 0.2s ease";
-          li.style.opacity = "0";
-          li.style.transform = "translateX(-20px)";
-          li.style.animation = `slideIn 0.3s ease forwards ${index * 0.1}s`;
+          if (animate) {
+            li.style.opacity = "0";
+            li.style.transform = "translateX(-20px)";
+            li.style.animation = `slideIn 0.3s ease forwards ${index * 0.1}s`;
+          }
 
           const threadInfoContainer = document.createElement("div");
           threadInfoContainer.style.flex = "1";
@@ -338,8 +424,8 @@
               isActive: t.id === thread.id ? "yes" : "no",
             }));
             chrome.storage.local.set({ threads: updatedThreads }, () => {
-              renderThreads();
-              renderChatMessages(thread.id);
+              renderThreads(false); // No animation on thread switch
+              renderChatMessages(thread.id, true); // Animate chat messages
             });
           });
 
@@ -351,7 +437,7 @@
                 t.id === thread.id ? { ...t, name: newName.trim() } : t,
               );
               chrome.storage.local.set({ threads: updatedThreads }, () => {
-                renderThreads();
+                renderThreads(animate);
               });
             }
           });
@@ -380,12 +466,13 @@
                   chrome.storage.local.set(
                     { threads: updatedThreads, chats: updatedChats },
                     () => {
-                      renderThreads();
+                      renderThreads(animate);
                       const newActiveThread = updatedThreads.find(
                         (t) => t.isActive === "yes",
                       );
                       renderChatMessages(
                         newActiveThread ? newActiveThread.id : "",
+                        true,
                       );
                     },
                   );
@@ -417,6 +504,10 @@
             from { opacity: 0; transform: translateX(-20px); }
             to { opacity: 1; transform: translateX(0); }
           }
+          @keyframes slideInMessage {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
         `;
         document.head.appendChild(style);
 
@@ -430,6 +521,7 @@
       "clear-history",
       "report-bug-btn",
       "get-help-btn",
+      "feature-request-btn",
       "privacy-policy-btn",
     ];
     buttons.forEach((id) => {
@@ -513,11 +605,84 @@
     document.head.appendChild(modalStyleElement);
 
     document.getElementById("report-bug-btn").addEventListener("click", () => {
-      window.open(
-        "https://docs.google.com/forms/d/e/1FAIpQLScSfquZW5idQXGsCHXc-OlMaa97eh_1i9BnmMf7Ea9HVSFQzg/viewform?usp=sharing&ouid=107403711423930702162",
-        "_blank",
-      );
+      window.open("https://forms.gle/c56V94vX7EZ1wcNx5", "_blank");
     });
+
+    document
+      .getElementById("feature-request-btn")
+      .addEventListener("click", () => {
+        window.open("https://forms.gle/qFsjimyMamC5ibvSA", "_blank");
+      });
+
+    document
+      .getElementById("sendToApiBtn")
+      .addEventListener("click", function () {
+        const inputText = customAIInput.value.trim();
+        if (!inputText) return;
+
+        const timestamp = new Date().toISOString();
+        const chatDisplay = document.getElementById("chat-display");
+
+        chrome.storage.local.get(
+          { chats: [], threads: [] },
+          async function (result) {
+            const chats = result.chats;
+            const activeThread = result.threads.find(
+              (t) => t.isActive === "yes",
+            );
+            if (!activeThread) return;
+
+            const userMessage = {
+              text: inputText,
+              date: timestamp,
+              role: "user",
+              threadId: activeThread.id,
+            };
+            chats.push(userMessage);
+            customAIInput.value = "";
+            await new Promise((resolve) => {
+              chrome.storage.local.set({ chats: chats }, () => {
+                renderChatMessages(activeThread.id, false); // No animation on new message
+                resolve();
+              });
+            });
+            showTypingNotification(chatDisplay);
+            const minTypingDuration = new Promise((resolve) =>
+              setTimeout(resolve, 500),
+            );
+            try {
+              const [aiResponse] = await Promise.all([
+                sendToApi(inputText),
+                minTypingDuration,
+              ]);
+              const aiMessage = {
+                text: aiResponse,
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(aiMessage);
+              chrome.storage.local.set({ chats: chats }, () => {
+                hideTypingNotification();
+                renderChatMessages(activeThread.id, false); // No animation on new message
+              });
+            } catch (error) {
+              console.error("Failed to get AI response:", error);
+              hideTypingNotification();
+              const errorMessage = {
+                text: "Error: Could not get AI response.",
+                date: new Date().toISOString(),
+                role: "ai",
+                threadId: activeThread.id,
+              };
+              chats.push(errorMessage);
+              chrome.storage.local.set({ chats: chats }, () => {
+                renderChatMessages(activeThread.id, false); // No animation on new message
+              });
+            }
+          },
+        );
+      });
 
     document.getElementById("get-help-btn").addEventListener("click", () => {
       const overlay = document.createElement("div");
@@ -596,13 +761,37 @@
           const updatedThreads = threads.map((t) => ({ ...t, isActive: "no" }));
           updatedThreads.push(newThread);
           chrome.storage.local.set({ threads: updatedThreads }, function () {
-            renderThreads();
-            renderChatMessages(id);
+            renderThreads(true);
+            renderChatMessages(id, true);
           });
         });
       });
 
-    function renderChatMessages(activeThreadId) {
+    document
+      .getElementById("clear-history")
+      .addEventListener("click", function () {
+        if (
+          confirm(
+            "Are you sure you want to delete all threads and chats? This action cannot be undone.",
+          )
+        ) {
+          chrome.storage.local.set({ threads: [], chats: [] }, function () {
+            const newThread = {
+              id: "thread_" + Date.now(),
+              name: "Thread 1",
+              created: Date.now(),
+              isActive: "yes",
+              messages: [],
+            };
+            chrome.storage.local.set({ threads: [newThread] }, function () {
+              renderThreads(true);
+              renderChatMessages(newThread.id, true);
+            });
+          });
+        }
+      });
+
+    function renderChatMessages(activeThreadId, animate = false) {
       chrome.storage.local.get({ chats: [] }, function (result) {
         const chatDisplay = document.getElementById("chat-display");
         const wasTyping =
@@ -613,11 +802,16 @@
           (chat) => chat.threadId === activeThreadId,
         );
 
-        threadChats.forEach((chat) => {
+        threadChats.forEach((chat, index) => {
           const messageElement = document.createElement("div");
           messageElement.style.display = "flex";
           messageElement.style.alignItems = "flex-start";
           messageElement.style.marginBottom = "12px";
+          //if (animate) {
+          //  messageElement.style.opacity = "0";
+          // messageElement.style.transform = "translateY(-20px)";
+          //  messageElement.style.animation = `slideInMessage 0.3s ease forwards ${index * 0.1}s`;
+          // }
 
           const bubbleContainer = document.createElement("div");
           bubbleContainer.style.maxWidth = "70%";
@@ -755,7 +949,7 @@
       }
     }
 
-    renderThreads();
+    renderThreads(true);
     chrome.storage.local.get({ threads: [] }, function (result) {
       let threads = result.threads;
       threads = threads.sort((a, b) => b.created - a.created);
@@ -766,8 +960,8 @@
           isActive: index === 0 ? "yes" : "no",
         }));
         chrome.storage.local.set({ threads: threads }, () => {
-          renderThreads();
-          renderChatMessages(threads[0].id);
+          renderThreads(true);
+          renderChatMessages(threads[0].id, true);
         });
       } else if (threads.length === 0) {
         const newThread = {
@@ -778,13 +972,13 @@
           messages: [],
         };
         chrome.storage.local.set({ threads: [newThread] }, () => {
-          renderThreads();
-          renderChatMessages(newThread.id);
+          renderThreads(true);
+          renderChatMessages(newThread.id, true);
         });
       } else {
-        renderThreads();
+        renderThreads(true);
         const activeThread = threads.find((t) => t.isActive === "yes");
-        renderChatMessages(activeThread.id);
+        renderChatMessages(activeThread.id, true);
       }
     });
 
@@ -825,7 +1019,7 @@
             customAIInput.value = "";
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
                 resolve();
               });
             });
@@ -847,7 +1041,7 @@
               chats.push(aiMessage);
               chrome.storage.local.set({ chats: chats }, () => {
                 hideTypingNotification();
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
               });
             } catch (error) {
               console.error("Failed to get AI response:", error);
@@ -860,7 +1054,7 @@
               };
               chats.push(errorMessage);
               chrome.storage.local.set({ chats: chats }, () => {
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
               });
             }
           } else {
@@ -898,7 +1092,7 @@
             customAIInput.value = "";
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
                 resolve();
               });
             });
@@ -920,7 +1114,7 @@
               chats.push(aiMessage);
               chrome.storage.local.set({ chats: chats }, () => {
                 hideTypingNotification();
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
               });
             } catch (error) {
               console.error("Failed to get AI response:", error);
@@ -933,7 +1127,7 @@
               };
               chats.push(errorMessage);
               chrome.storage.local.set({ chats: chats }, () => {
-                renderChatMessages(activeThread.id);
+                renderChatMessages(activeThread.id, false); // No animation on new message
               });
             }
           },
@@ -950,7 +1144,7 @@
       messages: [{ role: "user", content: text }],
     };
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/chat", {
+      const res = await fetch("https://ai.prompt-in.com/api/cha", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
