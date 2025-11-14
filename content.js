@@ -70,22 +70,42 @@ function sendGAEvent(eventName, params = {}) {
 
     const uiContainer = document.createElement("div");
     uiContainer.id = CONTAINER_ID;
+    
+    // *************************************************************
+    // 🌟 WICHTIG: NEUE STYLES FÜR FIXED POSITIONIERUNG UND ZENTRIERUNG
+    // *************************************************************
+    uiContainer.style.position = "fixed";
+    // Zentrieren Sie das Element im Viewport
+    uiContainer.style.top = "57.8%";
+    uiContainer.style.left = "80%";
+    uiContainer.style.transform = "translate(-50%, -50%)";
+    // Der Z-Index, um sicherzustellen, dass es über dem Seiteninhalt liegt
+    uiContainer.style.zIndex = "1000"; 
+    
+    // Optionale Anpassung: Setzen Sie die Gesamtgröße fest, damit das "translate" funktioniert
+    // Dies stellt sicher, dass es auf allen Bildschirmen gut aussieht
+    uiContainer.style.maxWidth = "1200px"; // Maximale Breite beibehalten
+    uiContainer.style.height = "80vh"; // Nehmen Sie 90% der Viewport-Höhe ein (damit es passt)
+    uiContainer.style.maxHeight = "900px"; // Optional: Eine maximale Höhe
+    
     uiContainer.innerHTML = `
       <div style="
         display: flex;
-        width: 90%;
-        max-width: 1200px;
-        margin: 2em auto;
+        /* VORHERIGE STYLES WURDEN HIER ENTFERNT/ÜBERSCHRIEBEN: 
+           width: 90%; max-width: 1200px; margin: 2em auto; min-height: 400px; */
+        
+        /* Diese Styles beibehalten, da sie für das Design wichtig sind */
         border-radius: 16px;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+        -webkit-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
+        -moz-box-shadow: 0px 0px 36px 0px rgba(255,255,255,0.6);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         color: #1e293b;
-        min-height: 400px;
+        height: 80%; /* Wichtig, um die 90vh/maxHeight des äußeren Containers zu nutzen */
         overflow: hidden;
       ">
-        <!-- Sidebar Navigation -->
-        <div style="
+        <div id="sidebar" style="
           background: #f1f5f9;
           padding: 24px;
           width: 260px;
@@ -93,17 +113,38 @@ function sendGAEvent(eventName, params = {}) {
           display: flex;
           flex-direction: column;
           gap: 16px;
-          max-height: 60vh;
+          /* height hier auf 100% setzen, da es nun einen fixierten Elter hat */
+          height: 100%; 
         ">
-          <h3 style="
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1e293b;
-          ">Chat Threads</h3>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+  <h3 id="threads-title" style="
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+">Chat Threads</h3>
+  <button id="toggle-sidebar-btn" style="
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  " title="Navigation ein-/ausklappen">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </button>
+</div>  
+
           <div id="threads-container" style="
             flex: 1;
-            max-height: 450px;
+            /* Max-Height kann jetzt gelöscht oder angepasst werden, da der Elter die Höhe vorgibt */
             overflow-y: auto;
             background: #ffffff;
             border-radius: 10px;
@@ -244,71 +285,159 @@ function sendGAEvent(eventName, params = {}) {
           </div>
         </div>
 
-        <!-- Main Content Area -->
-<div id="main-content" style="
-  flex: 1;
-  padding: 24px;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-">
-  <h2 style="
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #1e293b;
-  ">Talk to AI</h2>
+        <div id="main-content" style="
+          flex: 1;
+          padding: 24px;
+          background: #ffffff;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        ">
+          <h2 style="
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+          ">Talk to AI</h2>
 
-  <div id="chat-display" style="
-    flex: 1;
-    max-height: 425px;
-    overflow-y: auto;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 10px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: #94a3b8 #e2e8f0;
-  "></div>
+          <div id="chat-display" style="
+            flex: 1;
+            /* Max-Height kann jetzt gelöscht oder angepasst werden, da der Elter die Höhe vorgibt */
+            overflow-y: auto;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #e2e8f0;
+          "></div>
 
-  <!-- Input + Button Container -->
-  <div style="
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  ">
-    <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" 
-      type="text" placeholder="Type your message here..." style="
-      flex: 1;
-      padding: 12px 16px;
-      font-size: 1rem;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      box-sizing: border-box;
-      outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    " />
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          ">
+            <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" 
+              type="text" placeholder="Type your message here..." style="
+              flex: 1;
+              padding: 12px 16px;
+              font-size: 1rem;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              box-sizing: border-box;
+              outline: none;
+              transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            " />
 
-    <button id="sendToApiBtn" style="
-      padding: 12px 20px;
-      background-color: #25D366;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s;
-      white-space: nowrap;
-    ">Send</button>
-  </div>
+            <button id="sendToApiBtn" style="
+              padding: 12px 20px;
+              background-color: #25D366;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 1rem;
+              transition: background 0.2s;
+              white-space: nowrap;
+            ">Send</button>
+          </div>
+        </div>
       </div>
     `;
 
     targetDiv.insertBefore(uiContainer, targetDiv.firstChild);
+
+        // === Burger Button: Sidebar ein-/ausklappen ===
+    const sidebar = document.getElementById("sidebar");
+    const toggleBtn = document.getElementById("toggle-sidebar-btn");
+    const threadsContainer = document.getElementById("threads-container");
+    const newThreadBtn = document.getElementById("new-thread-btn");
+    const clearBtn = document.getElementById("clear-history");
+    const bottomButtons = document.querySelector('#sidebar > div:last-child');
+
+    let isCollapsed = false;
+
+    toggleBtn.addEventListener("click", () => {
+  isCollapsed = !isCollapsed;
+
+  const threadsTitle = document.getElementById("threads-title");
+
+  // Globale Variable zum Speichern der ursprünglichen Breite
+let originalMainWidth = null;
+
+if (isCollapsed) {
+  // 🟪 EINKLAPPEN
+  sidebar.style.width = "60px";
+  sidebar.style.padding = "16px 8px";
+  threadsContainer.style.display = "none";
+  newThreadBtn.style.display = "none";
+  clearBtn.style.display = "none";
+  bottomButtons.style.display = "none";
+  threadsTitle.style.display = "none";
+
+  toggleBtn.title = "Navigation ausklappen";
+  toggleBtn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="6" x2="12" y2="6"></line>
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="18" x2="12" y2="18"></line>
+    </svg>`;
+
+  toggleBtn.style.margin = "0 auto";
+
+  const mainContent = document.getElementById("main-content");
+
+  // 📏 ursprüngliche Breite speichern (nur beim ersten Mal)
+  if (originalMainWidth === null) {
+    originalMainWidth = getComputedStyle(mainContent).width;
+  }
+
+  // und auf 500px setzen
+  mainContent.style.width = "500px";
+
+} else {
+  // 🟩 AUSKLAPPEN
+  sidebar.style.width = "260px";
+  sidebar.style.padding = "24px";
+  threadsContainer.style.display = "flex";
+  newThreadBtn.style.display = "flex";
+  clearBtn.style.display = "flex";
+  bottomButtons.style.display = "flex";
+  threadsTitle.style.display = "block";
+
+  toggleBtn.title = "Navigation einklappen";
+  toggleBtn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>`;
+
+  toggleBtn.style.margin = "";
+
+  const mainContent = document.getElementById("main-content");
+
+  // 🔙 ursprüngliche Breite wiederherstellen, falls vorhanden
+  if (originalMainWidth) {
+    mainContent.style.width = originalMainWidth;
+  } else {
+    mainContent.style.width = ""; // fallback: Standard aus CSS
+  }
+}
+
+
+  // Sanfte Animation für Hauptbereich
+  const mainContent = document.getElementById("main-content");
+  if (mainContent) {
+    mainContent.style.transition = "all 0.3s ease";
+  }
+});
+
+    // Sanfte Animation für Hauptbereich
+    uiContainer.style.transition = "all 0.3s ease";
 
     // Dynamically adjust threads container height
     function adjustThreadsContainerHeight() {
@@ -1144,7 +1273,7 @@ function sendGAEvent(eventName, params = {}) {
       messages: [{ role: "user", content: text }],
     };
     try {
-      const res = await fetch("https://ai.prompt-in.com/api/cha", {
+      const res = await fetch("https://ai.prompt-in.com/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1182,3 +1311,44 @@ function sendGAEvent(eventName, params = {}) {
     }
   });
 })();
+
+function waitForElements(selectors, callback, interval = 200, timeout = 10000) {
+  const start = Date.now();
+
+  const check = () => {
+    const allFound = selectors.every(sel => document.querySelector(sel));
+    if (allFound) {
+      callback();
+    } else if (Date.now() - start < timeout) {
+      setTimeout(check, interval);
+    } else {
+      console.warn("Timeout: Nicht alle Elemente wurden gefunden:", selectors);
+    }
+  };
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    check();
+  } else {
+    window.addEventListener("DOMContentLoaded", check);
+  }
+}
+
+// === Anwendung ===
+waitForElements(
+  [
+    ".OZ9ddf",
+    "div[class=''][jscontroller='zp3Dsd']",
+    "[jsname='uLislf']"
+  ],
+  () => {
+    console.log("Alle Ziel-Elemente gefunden – Anpassungen werden ausgeführt.");
+
+    document.querySelector(".OZ9ddf").style.display = "block";
+
+    const el1 = document.querySelector("div[class=''][jscontroller='zp3Dsd']");
+    if (el1) el1.remove();
+
+    const el2 = document.querySelector("[jsname='uLislf']");
+    if (el2) el2.remove();
+  }
+);
