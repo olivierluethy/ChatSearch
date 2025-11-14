@@ -1,20 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "ChatSearch — ChatGPT Assistant for Google Search",
-  "version": "1.0.2",
-  "description": "Enhance your Google Search with ChatGPT. Get instant AI answers directly beside search results.",
+  "name": "AI Chat Modal",
+  "version": "1.0",
+  "description": "Draggbares, resizables Chatfenster mit Sidebar – Shadow DOM (open)",
   "permissions": ["storage"],
-  "icons": {
-    "16": "icon/icon16.png",
-    "48": "icon/icon48.png",
-    "128": "icon/icon128.png"
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Chat öffnen"
   },
-  "host_permissions": [
-    "https://ai.prompt-in.com/*"
-  ],
   "content_scripts": [
     {
-       "matches": [
+      "matches": [
         "*://www.google.com/*",
         "*://www.google.ch/*",
         "*://www.google.de/*",
@@ -402,7 +398,8 @@
         "*://www.google.pe/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "css": [],
+      "run_at": "document_end"
     }
   ],
   "content_security_policy": {
@@ -410,7 +407,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["js/bootstrap.bundle.min.js", "css/bootstrap.min.css", "icons/bootstrap-icons.svg"],
+      "resources": ["styles.css", "script.js"],
       "matches": ["<all_urls>"]
     }
   ]
