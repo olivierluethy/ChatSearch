@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatSearch — ChatGPT Assistant for Google Search",
-  "version": "1.0",
+  "version": "1.0.2",
   "description": "Enhance your Google Search with ChatGPT. Get instant AI answers directly beside search results.",
   "permissions": ["storage"],
   "icons": {
