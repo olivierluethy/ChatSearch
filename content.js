@@ -1113,7 +1113,7 @@ function sendGAEvent(eventName, params = {}) {
               color: #1e293b;
             "></ul>
           </div>
-          <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 16px; flex: 0 1 auto; min-height: 0; overflow-y: auto;">
+          <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto;">
           <button id="new-thread-btn" style="
             display: flex;
             align-items: center;
