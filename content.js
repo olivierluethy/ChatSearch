@@ -116,6 +116,20 @@ function sendGAEvent(eventName, params = {}) {
     return btn;
   }
 
+  // Small text button sharing the copy-button styling (used for per-message PDF).
+  function makeMiniButton(label, title, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cs-copy-btn";
+    btn.textContent = label;
+    btn.title = title;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return btn;
+  }
+
   // Inject the Markdown + highlight.js theme once. Colours come from
   // docs/STYLEGUIDE.md (slate/blue palette) — no external theme file.
   function injectFormattingStyles() {
@@ -463,6 +477,126 @@ function sendGAEvent(eventName, params = {}) {
     });
   }
 
+  // =========================================================================
+  // Issue #8 — Export chat / message as PDF (print-to-PDF, no new permissions)
+  // =========================================================================
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function messageToPrintHtml(chat) {
+    const who = chat.role === "user" ? "You" : "AI";
+    const when = chat.date ? new Date(chat.date).toLocaleString() : "";
+    let body;
+    if (
+      chat.role !== "user" &&
+      typeof marked !== "undefined" &&
+      typeof DOMPurify !== "undefined"
+    ) {
+      try {
+        body = `<div class="cs-print-md">${DOMPurify.sanitize(
+          marked.parse(String(chat.text || ""), { gfm: true, breaks: true }),
+        )}</div>`;
+      } catch (e) {
+        body = `<div class="cs-print-text">${escapeHtml(chat.text)}</div>`;
+      }
+    } else {
+      body = `<div class="cs-print-text">${escapeHtml(chat.text)}</div>`;
+    }
+    const role = chat.role === "user" ? "user" : "ai";
+    return `
+      <div class="cs-print-msg cs-print-${role}">
+        <div class="cs-print-meta">
+          <span class="cs-print-who">${who}</span>
+          <span class="cs-print-when">${escapeHtml(when)}</span>
+        </div>
+        ${body}
+      </div>`;
+  }
+
+  function buildPrintDocument(title, innerHtml) {
+    const styles = `
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1e293b; margin: 32px; line-height: 1.5;
+      }
+      .cs-print-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 20px; }
+      .cs-print-msg {
+        border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;
+        margin: 0 0 12px; page-break-inside: avoid;
+      }
+      .cs-print-user { background: #eff6ff; }
+      .cs-print-ai { background: #f8fafc; }
+      .cs-print-meta {
+        display: flex; justify-content: space-between;
+        font-size: 0.75rem; color: #64748b; margin-bottom: 6px;
+      }
+      .cs-print-who { font-weight: 600; color: #1e293b; }
+      .cs-print-text { white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
+      .cs-print-md { font-size: 0.95rem; }
+      .cs-print-md p { margin: 0 0 8px; }
+      .cs-print-md ul, .cs-print-md ol { margin: 0 0 8px; padding-left: 1.4em; }
+      .cs-print-md pre {
+        background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+        padding: 12px; overflow-x: auto;
+        font-family: ${MONO_FONT}; font-size: 0.85rem;
+      }
+      .cs-print-md :not(pre) > code {
+        background: #e5e7eb; padding: 1px 5px; border-radius: 4px;
+        font-family: ${MONO_FONT}; font-size: 0.85em;
+      }
+      .cs-print-md a { color: #2563eb; }
+      .cs-print-empty { color: #64748b; }
+      @media print {
+        body { margin: 0; }
+        .cs-print-msg { break-inside: avoid; }
+        a { color: #1e293b; text-decoration: underline; }
+      }
+    `;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(
+      title,
+    )}</title><style>${styles}</style></head><body><h1 class="cs-print-title">${escapeHtml(
+      title,
+    )}</h1>${innerHtml}<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};</script></body></html>`;
+  }
+
+  function openPrintWindow(html) {
+    const w = window.open("", "_blank");
+    if (!w) {
+      alert("Please allow pop-ups for this site to export as PDF.");
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  function exportMessageToPdf(chat) {
+    openPrintWindow(
+      buildPrintDocument("ChatSearch message", messageToPrintHtml(chat)),
+    );
+  }
+
+  function exportChatToPdf(threadId) {
+    chrome.storage.local.get({ chats: [], threads: [] }, function (result) {
+      const thread = result.threads.find((t) => t.id === threadId);
+      const msgs = result.chats.filter((c) => c.threadId === threadId);
+      const title = thread
+        ? `ChatSearch — ${thread.name}`
+        : "ChatSearch conversation";
+      const inner = msgs.length
+        ? msgs.map(messageToPrintHtml).join("")
+        : `<p class="cs-print-empty">This chat has no messages yet.</p>`;
+      openPrintWindow(buildPrintDocument(title, inner));
+    });
+  }
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
 
@@ -711,12 +845,36 @@ function sendGAEvent(eventName, params = {}) {
           flex-direction: column;
           gap: 16px;
         ">
-          <h2 style="
-            margin: 0;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1e293b;
-          ">Talk to AI</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <h2 style="
+              margin: 0;
+              font-size: 1.5rem;
+              font-weight: 600;
+              color: #1e293b;
+            ">Talk to AI</h2>
+            <button id="export-chat-btn" title="Export this chat as PDF" style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 8px 12px;
+              background: #e5e7eb;
+              color: #1e293b;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 0.85rem;
+              font-weight: 500;
+              white-space: nowrap;
+              transition: background 0.2s ease;
+            ">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Export PDF
+            </button>
+          </div>
 
           <div id="chat-display" style="
             flex: 1;
@@ -1313,6 +1471,21 @@ if (isCollapsed) {
       settingsBtn.style.background = "none";
     });
 
+    // Issue #8 — export the active chat as PDF.
+    const exportChatBtn = document.getElementById("export-chat-btn");
+    exportChatBtn.addEventListener("click", () => {
+      chrome.storage.local.get({ threads: [] }, (r) => {
+        const active = r.threads.find((t) => t.isActive === "yes");
+        if (active) exportChatToPdf(active.id);
+      });
+    });
+    exportChatBtn.addEventListener("mouseenter", () => {
+      exportChatBtn.style.background = "#d1d5db";
+    });
+    exportChatBtn.addEventListener("mouseleave", () => {
+      exportChatBtn.style.background = "#e5e7eb";
+    });
+
     document.getElementById("report-bug-btn").addEventListener("click", () => {
       window.open("https://forms.gle/c56V94vX7EZ1wcNx5", "_blank");
     });
@@ -1586,12 +1759,21 @@ if (isCollapsed) {
 
           bubbleContainer.appendChild(messageBubble);
           bubbleContainer.appendChild(timestamp);
-          // Issue #10 — copy the full AI output from its bubble.
+          // Issues #10 / #8 — per-message actions: copy (AI) + export PDF (all).
+          const msgActions = document.createElement("div");
+          msgActions.style.cssText =
+            "display: flex; gap: 6px; margin-top: 4px; align-self: " +
+            (chat.role === "user" ? "flex-end" : "flex-start") +
+            ";";
           if (chat.role !== "user") {
-            bubbleContainer.appendChild(
-              makeCopyButton(() => chat.text, "cs-msg-copy"),
-            );
+            msgActions.appendChild(makeCopyButton(() => chat.text));
           }
+          msgActions.appendChild(
+            makeMiniButton("PDF", "Export this message as PDF", () =>
+              exportMessageToPdf(chat),
+            ),
+          );
+          bubbleContainer.appendChild(msgActions);
           messageElement.appendChild(
             chat.role === "user" ? bubbleContainer : iconContainer,
           );
