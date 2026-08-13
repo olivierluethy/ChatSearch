@@ -936,6 +936,19 @@ if (isCollapsed) {
           ).length;
           threadDetails.textContent = `Created: ${createdDate} | Messages: ${messageCount}`;
 
+          // Issue #7 — clone/fork this conversation into a new thread.
+          const cloneBtn = document.createElement("button");
+          cloneBtn.title = "Continue in new chat";
+          cloneBtn.style.background = "none";
+          cloneBtn.style.border = "none";
+          cloneBtn.style.cursor = "pointer";
+          cloneBtn.style.fontSize = "0.9rem";
+          cloneBtn.style.transition = "color 0.2s ease";
+          cloneBtn.style.display = "flex";
+          cloneBtn.style.alignItems = "center";
+          cloneBtn.style.color = "#64748b";
+          cloneBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>`;
+
           const editBtn = document.createElement("button");
           editBtn.textContent = "✏️";
           editBtn.style.background = "none";
@@ -951,6 +964,53 @@ if (isCollapsed) {
           deleteBtn.style.cursor = "pointer";
           deleteBtn.style.fontSize = "0.9rem";
           deleteBtn.style.transition = "color 0.2s ease";
+
+          cloneBtn.addEventListener("mouseenter", () => {
+            cloneBtn.style.color = "#2563eb";
+          });
+          cloneBtn.addEventListener("mouseleave", () => {
+            cloneBtn.style.color = "#64748b";
+          });
+          cloneBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            chrome.storage.local.get(
+              { threads: [], chats: [] },
+              function (data) {
+                const sourceThread = data.threads.find(
+                  (t) => t.id === thread.id,
+                );
+                if (!sourceThread) return;
+                const newId = "thread_" + Date.now();
+                // Deep-copy every message from the source thread.
+                const clonedChats = data.chats
+                  .filter((c) => c.threadId === thread.id)
+                  .map((c) => ({
+                    ...JSON.parse(JSON.stringify(c)),
+                    threadId: newId,
+                  }));
+                const newThread = {
+                  id: newId,
+                  name: `${sourceThread.name} (copy)`,
+                  created: Date.now(),
+                  isActive: "yes",
+                  messages: [],
+                  clonedFrom: sourceThread.id,
+                  clonedFromName: sourceThread.name,
+                };
+                const updatedThreads = data.threads
+                  .map((t) => ({ ...t, isActive: "no" }))
+                  .concat(newThread);
+                const updatedChats = data.chats.concat(clonedChats);
+                chrome.storage.local.set(
+                  { threads: updatedThreads, chats: updatedChats },
+                  () => {
+                    renderThreads(true);
+                    renderChatMessages(newId, true);
+                  },
+                );
+              },
+            );
+          });
 
           editBtn.addEventListener("mouseenter", () => {
             editBtn.style.color = "#2563eb";
@@ -1040,6 +1100,7 @@ if (isCollapsed) {
           threadInfoContainer.appendChild(threadNameSpan);
           threadInfoContainer.appendChild(threadDetails);
           li.appendChild(threadInfoContainer);
+          li.appendChild(cloneBtn);
           li.appendChild(editBtn);
           li.appendChild(deleteBtn);
           threadsList.appendChild(li);
@@ -1440,11 +1501,30 @@ if (isCollapsed) {
       });
 
     function renderChatMessages(activeThreadId, animate = false) {
-      chrome.storage.local.get({ chats: [] }, function (result) {
+      chrome.storage.local.get({ chats: [], threads: [] }, function (result) {
         const chatDisplay = document.getElementById("chat-display");
         const wasTyping =
           document.getElementById("typing-notification") !== null;
         chatDisplay.innerHTML = "";
+
+        // Issue #7 — show a "Cloned from …" indicator for forked threads.
+        const currentThread = result.threads.find(
+          (t) => t.id === activeThreadId,
+        );
+        if (currentThread && currentThread.clonedFrom) {
+          const badge = document.createElement("div");
+          badge.className = "cs-cloned-indicator";
+          badge.style.cssText = `
+            align-self: center; font-size: 0.75rem; color: #64748b;
+            background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px;
+            padding: 4px 12px; margin-bottom: 4px; max-width: 90%;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          `;
+          const label = currentThread.clonedFromName || "another chat";
+          badge.textContent = `Cloned from "${label}"`;
+          badge.title = badge.textContent;
+          chatDisplay.appendChild(badge);
+        }
 
         const threadChats = result.chats.filter(
           (chat) => chat.threadId === activeThreadId,
