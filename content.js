@@ -1116,7 +1116,7 @@ function sendGAEvent(eventName, params = {}) {
               color: #1e293b;
             "></ul>
           </div>
-          <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto;">
+          <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; margin-bottom: 24px;">
           <div style="display: flex; gap: 8px;">
           <button id="new-thread-btn" title="Start a new chat" style="
             display: flex;
