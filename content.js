@@ -229,6 +229,33 @@ function sendGAEvent(eventName, params = {}) {
     });
   }
 
+  // =========================================================================
+  // Issues #1 / #9 — persisted user settings
+  // =========================================================================
+  const DEFAULT_SETTINGS = { newChatPerSearch: false, aiAvatarUrl: "" };
+
+  function getSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get({ settings: DEFAULT_SETTINGS }, (r) => {
+        resolve(Object.assign({}, DEFAULT_SETTINGS, r.settings || {}));
+      });
+    });
+  }
+
+  function saveSettings(patch) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get({ settings: DEFAULT_SETTINGS }, (r) => {
+        const merged = Object.assign(
+          {},
+          DEFAULT_SETTINGS,
+          r.settings || {},
+          patch,
+        );
+        chrome.storage.local.set({ settings: merged }, () => resolve(merged));
+      });
+    });
+  }
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
 
@@ -289,6 +316,23 @@ function sendGAEvent(eventName, params = {}) {
   font-weight: 600;
   color: #1e293b;
 ">Chat Threads</h3>
+  <div id="sidebar-header-controls" style="display: flex; align-items: center; gap: 4px;">
+  <button id="settings-btn" style="
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  " title="Settings">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
   <button id="toggle-sidebar-btn" style="
     background: none;
     border: none;
@@ -306,7 +350,8 @@ function sendGAEvent(eventName, params = {}) {
       <line x1="3" y1="18" x2="21" y2="18"></line>
     </svg>
   </button>
-</div>  
+  </div>
+</div>
 
           <div id="threads-container" style="
             flex: 1;
@@ -899,6 +944,107 @@ if (isCollapsed) {
     `;
     document.head.appendChild(modalStyleElement);
 
+    // === Issue #1/#9 — Settings modal ===
+    // Small on/off switch matching STYLEGUIDE tokens.
+    function makeToggle(initial, onChange) {
+      const track = document.createElement("button");
+      track.type = "button";
+      track.setAttribute("role", "switch");
+      let on = !!initial;
+      track.setAttribute("aria-checked", String(on));
+      track.style.cssText = `
+        position: relative; width: 44px; height: 24px; border-radius: 999px;
+        border: none; cursor: pointer; flex: 0 0 auto; padding: 0;
+        background: ${on ? "#2563eb" : "#d1d5db"}; transition: background 0.2s ease;
+      `;
+      const knob = document.createElement("span");
+      knob.style.cssText = `
+        position: absolute; top: 2px; left: ${on ? "22px" : "2px"};
+        width: 20px; height: 20px; border-radius: 50%; background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: left 0.2s ease;
+      `;
+      track.appendChild(knob);
+      track.addEventListener("click", () => {
+        on = !on;
+        track.setAttribute("aria-checked", String(on));
+        track.style.background = on ? "#2563eb" : "#d1d5db";
+        knob.style.left = on ? "22px" : "2px";
+        onChange(on);
+      });
+      return track;
+    }
+
+    function openSettingsModal() {
+      getSettings().then((settings) => {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = modalStyles;
+        const modal = document.createElement("div");
+        modal.style.cssText = modalContentStyles;
+
+        const title = document.createElement("h2");
+        title.textContent = "Settings";
+        title.style.cssText =
+          "margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;";
+        modal.appendChild(title);
+
+        // --- Google search behaviour (#1) ---
+        const section = document.createElement("div");
+        section.style.marginBottom = "20px";
+        const secTitle = document.createElement("h3");
+        secTitle.textContent = "Google search behaviour";
+        secTitle.style.cssText =
+          "margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #1e293b;";
+        const desc = document.createElement("p");
+        desc.style.cssText =
+          "margin: 0 0 12px; font-size: 0.85rem; color: #64748b; line-height: 1.5;";
+        const row = document.createElement("div");
+        row.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; gap: 12px;";
+        const rowLabel = document.createElement("span");
+        rowLabel.style.cssText = "font-size: 0.9rem; color: #1e293b;";
+        rowLabel.textContent = "Start a new chat for each Google search";
+        function syncDesc(on) {
+          desc.textContent = on
+            ? "Each Google search opens in a brand-new chat thread."
+            : "Google searches continue in your current chat thread.";
+        }
+        syncDesc(settings.newChatPerSearch);
+        const toggle = makeToggle(settings.newChatPerSearch, (on) => {
+          syncDesc(on);
+          saveSettings({ newChatPerSearch: on });
+        });
+        row.appendChild(rowLabel);
+        row.appendChild(toggle);
+        section.appendChild(secTitle);
+        section.appendChild(desc);
+        section.appendChild(row);
+        modal.appendChild(section);
+
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "Close";
+        closeBtn.style.cssText = modalButtonStyles;
+        closeBtn.addEventListener("click", () =>
+          document.body.removeChild(overlay),
+        );
+        modal.appendChild(closeBtn);
+
+        overlay.appendChild(modal);
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) document.body.removeChild(overlay);
+        });
+        document.body.appendChild(overlay);
+      });
+    }
+
+    const settingsBtn = document.getElementById("settings-btn");
+    settingsBtn.addEventListener("click", openSettingsModal);
+    settingsBtn.addEventListener("mouseenter", () => {
+      settingsBtn.style.background = "#e2e8f0";
+    });
+    settingsBtn.addEventListener("mouseleave", () => {
+      settingsBtn.style.background = "none";
+    });
+
     document.getElementById("report-bug-btn").addEventListener("click", () => {
       window.open("https://forms.gle/c56V94vX7EZ1wcNx5", "_blank");
     });
@@ -1296,10 +1442,37 @@ if (isCollapsed) {
       const chatDisplay = document.getElementById("chat-display");
 
       chrome.storage.local.get(
-        { chats: [], threads: [] },
+        { chats: [], threads: [], settings: DEFAULT_SETTINGS },
         async function (result) {
           const chats = result.chats;
-          const activeThread = result.threads.find((t) => t.isActive === "yes");
+          const settings = Object.assign(
+            {},
+            DEFAULT_SETTINGS,
+            result.settings || {},
+          );
+
+          // Issue #1 — optionally start a fresh chat for each Google search.
+          let activeThread;
+          if (settings.newChatPerSearch) {
+            const threads = result.threads.map((t) => ({
+              ...t,
+              isActive: "no",
+            }));
+            activeThread = {
+              id: "thread_" + Date.now(),
+              name: `Search: ${inputText.slice(0, 40)}`,
+              created: Date.now(),
+              isActive: "yes",
+              messages: [],
+            };
+            threads.push(activeThread);
+            await new Promise((resolve) =>
+              chrome.storage.local.set({ threads: threads }, resolve),
+            );
+            renderThreads(false);
+          } else {
+            activeThread = result.threads.find((t) => t.isActive === "yes");
+          }
           if (!activeThread) return;
 
           const recentUserMessages = chats
