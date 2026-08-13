@@ -293,7 +293,7 @@ function sendGAEvent(eventName, params = {}) {
     if (document.getElementById("cs-theme-styles")) return;
     const R = "#custom-ai-box";
     const lightVars = `
-      ${R} {
+      ${R}, .cs-overlay {
         --cs-grad-a:#ffffff; --cs-grad-b:#f8fafc;
         --cs-surface:#ffffff; --cs-sidebar:#f1f5f9; --cs-chat-bg:#f8fafc;
         --cs-border:#e2e8f0; --cs-border-strong:#d1d5db;
@@ -363,11 +363,13 @@ function sendGAEvent(eventName, params = {}) {
       {P} .cs-thread-action--clone:hover, {P} .cs-thread-action--rename:hover { color: var(--cs-primary) !important; }
       {P} mark.cs-hit { background: var(--cs-active) !important; color: var(--cs-text) !important; }`;
 
-    const darkExplicit = darkBody.replace(/\{P\}/g, `${R}[data-theme="dark"]`);
-    const darkAuto = darkBody.replace(
-      /\{P\}/g,
-      `${R}[data-theme="auto"]`,
-    );
+    // Expand the dark rule body for each theme root (the widget and any modal
+    // overlay, which lives on document.body — outside #custom-ai-box).
+    const expand = (p) => darkBody.replace(/\{P\}/g, p);
+    const darkExplicit = expand(`${R}[data-theme="dark"]`);
+    const darkOverlay = expand(`.cs-overlay[data-theme="dark"]`);
+    const darkAuto = expand(`${R}[data-theme="auto"]`);
+    const darkAutoOverlay = expand(`.cs-overlay[data-theme="auto"]`);
 
     const style = document.createElement("style");
     style.id = "cs-theme-styles";
@@ -375,21 +377,28 @@ function sendGAEvent(eventName, params = {}) {
       ${lightVars}
       ${R} #settings-btn:hover, ${R} #toggle-sidebar-btn:hover { background: var(--cs-hover); }
       ${R} .cs-thread { border-radius: 8px; }
-      ${R}[data-theme="dark"] { ${darkVarBody} }
+      ${R}[data-theme="dark"], .cs-overlay[data-theme="dark"] { ${darkVarBody} }
       @media (prefers-color-scheme: dark) {
-        ${R}[data-theme="auto"] { ${darkVarBody} }
+        ${R}[data-theme="auto"], .cs-overlay[data-theme="auto"] { ${darkVarBody} }
       }
       ${darkExplicit}
+      ${darkOverlay}
       @media (prefers-color-scheme: dark) {
         ${darkAuto}
+        ${darkAutoOverlay}
       }
     `;
     document.head.appendChild(style);
   }
 
   function applyTheme(theme) {
+    const t = theme || "auto";
     const box = document.getElementById(CONTAINER_ID);
-    if (box) box.setAttribute("data-theme", theme || "auto");
+    if (box) box.setAttribute("data-theme", t);
+    // Modals live on document.body (outside the widget) — keep them in sync.
+    document
+      .querySelectorAll(".cs-overlay")
+      .forEach((o) => o.setAttribute("data-theme", t));
   }
 
   function getSettings() {
@@ -1972,6 +1981,8 @@ if (isCollapsed) {
       getSettings().then((settings) => {
         const overlay = document.createElement("div");
         overlay.style.cssText = modalStyles;
+        overlay.className = "cs-overlay";
+        overlay.setAttribute("data-theme", (document.getElementById(CONTAINER_ID) && document.getElementById(CONTAINER_ID).getAttribute("data-theme")) || "auto");
         const modal = document.createElement("div");
         modal.style.cssText = modalContentStyles;
         modal.className = "cs-modal-content";
@@ -2286,6 +2297,8 @@ if (isCollapsed) {
     document.getElementById("get-help-btn").addEventListener("click", () => {
       const overlay = document.createElement("div");
       overlay.style.cssText = modalStyles;
+        overlay.className = "cs-overlay";
+        overlay.setAttribute("data-theme", (document.getElementById(CONTAINER_ID) && document.getElementById(CONTAINER_ID).getAttribute("data-theme")) || "auto");
       const modal = document.createElement("div");
       modal.style.cssText = modalContentStyles;
         modal.className = "cs-modal-content";
@@ -2319,6 +2332,8 @@ if (isCollapsed) {
       .addEventListener("click", () => {
         const overlay = document.createElement("div");
         overlay.style.cssText = modalStyles;
+        overlay.className = "cs-overlay";
+        overlay.setAttribute("data-theme", (document.getElementById(CONTAINER_ID) && document.getElementById(CONTAINER_ID).getAttribute("data-theme")) || "auto");
         const modal = document.createElement("div");
         modal.style.cssText = modalContentStyles;
         modal.className = "cs-modal-content";
