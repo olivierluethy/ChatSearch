@@ -63,6 +63,172 @@ function sendGAEvent(eventName, params = {}) {
     </svg>
   `;
 
+  // =========================================================================
+  // Issue #10 — Markdown rendering, code highlighting, and copy buttons
+  // =========================================================================
+  const MONO_FONT =
+    "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
+
+  // Clipboard write with a hidden-textarea + execCommand fallback.
+  function fallbackCopy(text) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard
+        .writeText(text)
+        .catch(() => fallbackCopy(text));
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  // A reusable "Copy" button that shows transient "Copied!" feedback.
+  function makeCopyButton(getText, extraClass) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cs-copy-btn" + (extraClass ? " " + extraClass : "");
+    btn.textContent = "Copy";
+    btn.title = "Copy to clipboard";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      Promise.resolve(copyTextToClipboard(getText())).then(() => {
+        btn.textContent = "Copied!";
+        setTimeout(() => {
+          btn.textContent = "Copy";
+        }, 1200);
+      });
+    });
+    return btn;
+  }
+
+  // Inject the Markdown + highlight.js theme once. Colours come from
+  // docs/STYLEGUIDE.md (slate/blue palette) — no external theme file.
+  function injectFormattingStyles() {
+    if (document.getElementById("cs-formatting-styles")) return;
+    const style = document.createElement("style");
+    style.id = "cs-formatting-styles";
+    style.textContent = `
+      .cs-md { font-size: 0.95rem; line-height: 1.5; }
+      .cs-md > *:first-child { margin-top: 0; }
+      .cs-md > *:last-child { margin-bottom: 0; }
+      .cs-md p { margin: 0 0 8px; }
+      .cs-md ul, .cs-md ol { margin: 0 0 8px; padding-left: 1.4em; }
+      .cs-md li { margin: 2px 0; }
+      .cs-md h1, .cs-md h2, .cs-md h3, .cs-md h4, .cs-md h5, .cs-md h6 {
+        margin: 8px 0 4px; font-weight: 600; line-height: 1.3; color: #1e293b;
+      }
+      .cs-md h1 { font-size: 1.15rem; }
+      .cs-md h2 { font-size: 1.08rem; }
+      .cs-md h3 { font-size: 1rem; }
+      .cs-md h4, .cs-md h5, .cs-md h6 { font-size: 0.95rem; }
+      .cs-md a { color: #2563eb; text-decoration: underline; }
+      .cs-md blockquote {
+        margin: 0 0 8px; padding: 4px 12px;
+        border-left: 3px solid #cbd5e1; color: #475569;
+      }
+      .cs-md hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+      .cs-md :not(pre) > code {
+        background: #e5e7eb; color: #1e293b; padding: 1px 5px;
+        border-radius: 4px; font-family: ${MONO_FONT}; font-size: 0.85em;
+      }
+      .cs-md table { border-collapse: collapse; margin: 0 0 8px; font-size: 0.9rem; }
+      .cs-md th, .cs-md td { border: 1px solid #e2e8f0; padding: 4px 8px; }
+      .cs-md th { background: #f1f5f9; }
+
+      .cs-code-wrap { position: relative; margin: 0 0 8px; }
+      .cs-code-wrap pre {
+        margin: 0; background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 8px; padding: 12px 14px; overflow-x: auto;
+      }
+      .cs-code-wrap pre code {
+        font-family: ${MONO_FONT}; font-size: 0.85rem; line-height: 1.5;
+        background: none; padding: 0; color: #1e293b;
+      }
+
+      .cs-copy-btn {
+        background: #e5e7eb; color: #1e293b; border: none; border-radius: 6px;
+        font-size: 0.75rem; font-weight: 500; padding: 4px 8px; cursor: pointer;
+        transition: background 0.2s ease;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .cs-copy-btn:hover { background: #d1d5db; }
+      .cs-code-copy {
+        position: absolute; top: 8px; right: 8px; opacity: 0;
+        transition: opacity 0.2s ease, background 0.2s ease;
+      }
+      .cs-code-wrap:hover .cs-code-copy,
+      .cs-code-copy:focus { opacity: 1; }
+      .cs-msg-copy { margin-top: 4px; align-self: flex-start; }
+
+      /* highlight.js theme — light, slate/blue (STYLEGUIDE §9) */
+      .hljs { color: #1e293b; background: transparent; }
+      .hljs-comment, .hljs-quote { color: #64748b; font-style: italic; }
+      .hljs-keyword, .hljs-selector-tag, .hljs-built_in,
+      .hljs-name, .hljs-literal { color: #2563eb; }
+      .hljs-string, .hljs-addition, .hljs-regexp, .hljs-symbol { color: #0f766e; }
+      .hljs-number, .hljs-meta .hljs-number, .hljs-bullet, .hljs-link { color: #b45309; }
+      .hljs-title, .hljs-title.function_, .hljs-section { color: #1e40af; font-weight: 500; }
+      .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable { color: #1e293b; }
+      .hljs-type, .hljs-class .hljs-title, .hljs-tag, .hljs-meta { color: #7c3aed; }
+      .hljs-deletion { color: #b91c1c; }
+      .hljs-emphasis { font-style: italic; }
+      .hljs-strong { font-weight: 700; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Render Markdown text into a container: marked -> DOMPurify -> innerHTML,
+  // then highlight fenced code and attach per-block copy buttons.
+  function renderMarkdownInto(container, text) {
+    injectFormattingStyles();
+    if (typeof marked === "undefined" || typeof DOMPurify === "undefined") {
+      container.textContent = text; // safe fallback if libs failed to load
+      return;
+    }
+    try {
+      const html = marked.parse(text == null ? "" : String(text), {
+        gfm: true,
+        breaks: true,
+      });
+      container.innerHTML = DOMPurify.sanitize(html);
+    } catch (e) {
+      container.textContent = text;
+      return;
+    }
+    container.classList.add("cs-md");
+
+    container.querySelectorAll("pre > code").forEach((code) => {
+      const pre = code.parentElement;
+      if (typeof hljs !== "undefined") {
+        try {
+          hljs.highlightElement(code);
+        } catch (e) {
+          /* unknown language -> leave as plain code */
+        }
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "cs-code-wrap";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      wrap.appendChild(makeCopyButton(() => code.textContent, "cs-code-copy"));
+    });
+  }
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
 
@@ -954,7 +1120,12 @@ if (isCollapsed) {
           messageBubble.style.wordBreak = "break-word";
           messageBubble.style.fontSize = "0.95rem";
           messageBubble.style.lineHeight = "1.5";
-          messageBubble.textContent = chat.text;
+          // Issue #10 — render AI Markdown/code; keep user input as plain text.
+          if (chat.role === "user") {
+            messageBubble.textContent = chat.text;
+          } else {
+            renderMarkdownInto(messageBubble, chat.text);
+          }
 
           const timestamp = document.createElement("div");
           timestamp.style.fontSize = "0.75rem";
@@ -982,6 +1153,12 @@ if (isCollapsed) {
 
           bubbleContainer.appendChild(messageBubble);
           bubbleContainer.appendChild(timestamp);
+          // Issue #10 — copy the full AI output from its bubble.
+          if (chat.role !== "user") {
+            bubbleContainer.appendChild(
+              makeCopyButton(() => chat.text, "cs-msg-copy"),
+            );
+          }
           messageElement.appendChild(
             chat.role === "user" ? bubbleContainer : iconContainer,
           );
