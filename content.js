@@ -523,6 +523,179 @@ function sendGAEvent(eventName, params = {}) {
   }
 
   // =========================================================================
+  // Issue #2 (Round 2) — resizable threads column + whole-widget corner resize
+  // =========================================================================
+  const SIDEBAR_MIN = 220;
+  const SIDEBAR_MAX = 480;
+  const WIDGET_MIN_W = 420;
+  const WIDGET_MIN_H = 320;
+
+  function setupResizing(container) {
+    const inner = container.firstElementChild; // the flex card
+    const sidebar = container.querySelector("#sidebar");
+    const main = container.querySelector("#main-content");
+    if (!inner || !sidebar || !main) return;
+
+    // --- Column resize handle (between threads panel and chat) ---
+    let colHandle = container.querySelector("#cs-col-resize");
+    if (!colHandle) {
+      colHandle = document.createElement("div");
+      colHandle.id = "cs-col-resize";
+      colHandle.title = "Drag to resize the threads panel";
+      colHandle.style.cssText =
+        "flex: 0 0 6px; align-self: stretch; cursor: col-resize; background: transparent; transition: background 0.15s ease; z-index: 2;";
+      inner.insertBefore(colHandle, main);
+    }
+    colHandle.addEventListener("mouseenter", () => {
+      colHandle.style.background = "rgba(37,99,235,0.4)";
+    });
+    colHandle.addEventListener("mouseleave", () => {
+      colHandle.style.background = "transparent";
+    });
+
+    let colDragging = false;
+    let colStartX = 0;
+    let colStartW = 0;
+    let colPendingW = 0;
+    let colRaf = null;
+    function applyColWidth() {
+      colRaf = null;
+      sidebar.style.width = colPendingW + "px";
+    }
+    colHandle.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      colDragging = true;
+      colStartX = e.clientX;
+      colStartW = sidebar.getBoundingClientRect().width;
+      colPendingW = colStartW;
+      colHandle.style.background = "rgba(37,99,235,0.4)";
+      try {
+        colHandle.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      e.preventDefault();
+    });
+    colHandle.addEventListener("pointermove", (e) => {
+      if (!colDragging) return;
+      let w = colStartW + (e.clientX - colStartX);
+      w = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, w));
+      colPendingW = w;
+      if (colRaf == null) colRaf = requestAnimationFrame(applyColWidth);
+    });
+    function endCol(e) {
+      if (!colDragging) return;
+      colDragging = false;
+      colHandle.style.background = "transparent";
+      try {
+        colHandle.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      if (colRaf != null) {
+        cancelAnimationFrame(colRaf);
+        applyColWidth();
+      }
+      chrome.storage.local.set({ sidebarWidth: colPendingW });
+    }
+    colHandle.addEventListener("pointerup", endCol);
+    colHandle.addEventListener("pointercancel", endCol);
+
+    // --- Corner resize handle (whole widget, bottom-right) ---
+    let corner = container.querySelector("#cs-corner-resize");
+    if (!corner) {
+      corner = document.createElement("div");
+      corner.id = "cs-corner-resize";
+      corner.title = "Drag to resize the window";
+      corner.style.cssText =
+        "position: absolute; width: 18px; height: 18px; right: 3px; bottom: 3px; cursor: nwse-resize; z-index: 4; display: flex; align-items: flex-end; justify-content: flex-end;";
+      corner.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round"><path d="M14 6 L6 14 M14 10 L10 14 M14 14 L13.5 14.5"/></svg>`;
+      container.appendChild(corner);
+    }
+
+    let cornerDragging = false;
+    let cX = 0;
+    let cY = 0;
+    let cW = 0;
+    let cH = 0;
+    let cPendingW = 0;
+    let cPendingH = 0;
+    let cRaf = null;
+    function applyWH() {
+      cRaf = null;
+      container.style.width = cPendingW + "px";
+      container.style.height = cPendingH + "px";
+    }
+    corner.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      const rect = container.getBoundingClientRect();
+      container.style.maxWidth = "none";
+      container.style.maxHeight = "none";
+      container.style.width = rect.width + "px";
+      container.style.height = rect.height + "px";
+      cornerDragging = true;
+      cX = e.clientX;
+      cY = e.clientY;
+      cW = rect.width;
+      cH = rect.height;
+      cPendingW = rect.width;
+      cPendingH = rect.height;
+      try {
+        corner.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    corner.addEventListener("pointermove", (e) => {
+      if (!cornerDragging) return;
+      cPendingW = Math.max(
+        WIDGET_MIN_W,
+        Math.min(window.innerWidth, cW + (e.clientX - cX)),
+      );
+      cPendingH = Math.max(
+        WIDGET_MIN_H,
+        Math.min(window.innerHeight, cH + (e.clientY - cY)),
+      );
+      if (cRaf == null) cRaf = requestAnimationFrame(applyWH);
+    });
+    function endCorner(e) {
+      if (!cornerDragging) return;
+      cornerDragging = false;
+      try {
+        corner.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      if (cRaf != null) {
+        cancelAnimationFrame(cRaf);
+        applyWH();
+      }
+      chrome.storage.local.set({
+        widgetSize: { width: cPendingW, height: cPendingH },
+      });
+    }
+    corner.addEventListener("pointerup", endCorner);
+    corner.addEventListener("pointercancel", endCorner);
+
+    // --- Restore persisted sizes ---
+    chrome.storage.local.get(
+      { sidebarWidth: null, widgetSize: null },
+      (r) => {
+        if (typeof r.sidebarWidth === "number") {
+          sidebar.style.width =
+            Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, r.sidebarWidth)) + "px";
+        }
+        if (r.widgetSize && typeof r.widgetSize.width === "number") {
+          container.style.maxWidth = "none";
+          container.style.maxHeight = "none";
+          container.style.width =
+            Math.max(WIDGET_MIN_W, Math.min(window.innerWidth, r.widgetSize.width)) +
+            "px";
+          container.style.height =
+            Math.max(
+              WIDGET_MIN_H,
+              Math.min(window.innerHeight, r.widgetSize.height),
+            ) + "px";
+        }
+      },
+    );
+  }
+
+  // =========================================================================
   // Issue #8 — Export chat / message as PDF (print-to-PDF, no new permissions)
   // =========================================================================
   function escapeHtml(s) {
@@ -1070,6 +1243,10 @@ if (isCollapsed) {
   if (mainContent) {
     mainContent.style.transition = "all 0.3s ease";
   }
+
+  // Hide the column resize handle while the sidebar is collapsed.
+  const colHandle = document.getElementById("cs-col-resize");
+  if (colHandle) colHandle.style.display = isCollapsed ? "none" : "block";
 });
 
     // Sanfte Animation für Hauptbereich
@@ -2255,6 +2432,8 @@ if (isCollapsed) {
     // Issue #6 — make the panel draggable by its header and restore last position.
     setupDragging(uiContainer);
     restorePanelPosition(uiContainer);
+    // Issue #2 (Round 2) — resizable threads column + whole-widget corner.
+    setupResizing(uiContainer);
   }
 
   // Issue #4 — Context awareness: forward the active thread's history so the
