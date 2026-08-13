@@ -781,7 +781,7 @@ if (isCollapsed) {
             );
             try {
               const [aiResponse] = await Promise.all([
-                sendToApi(inputText),
+                sendToApi(inputText, activeThread.id),
                 minTypingDuration,
               ]);
               const aiMessage = {
@@ -1158,7 +1158,7 @@ if (isCollapsed) {
             );
             try {
               const [aiResponse] = await Promise.all([
-                sendToApi(inputText),
+                sendToApi(inputText, activeThread.id),
                 minTypingDuration,
               ]);
               const aiMessage = {
@@ -1231,7 +1231,7 @@ if (isCollapsed) {
             );
             try {
               const [aiResponse] = await Promise.all([
-                sendToApi(inputText),
+                sendToApi(inputText, activeThread.id),
                 minTypingDuration,
               ]);
               const aiMessage = {
@@ -1267,10 +1267,45 @@ if (isCollapsed) {
     window.addEventListener("resize", adjustThreadsContainerHeight);
   }
 
-  async function sendToApi(text) {
+  // Issue #4 — Context awareness: forward the active thread's history so the
+  // AI actually "remembers" the conversation (the Help/Privacy copy claims this).
+  const MAX_HISTORY_MESSAGES = 30;
+
+  function roleForApi(role) {
+    return role === "ai" ? "assistant" : "user";
+  }
+
+  // Build the API messages array from the stored thread history, in order,
+  // capped to the most recent MAX_HISTORY_MESSAGES messages.
+  function getThreadHistory(threadId) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get({ chats: [] }, function (result) {
+        const messages = result.chats
+          .filter((c) => c.threadId === threadId)
+          .map((c) => ({ role: roleForApi(c.role), content: c.text }));
+        resolve(messages.slice(-MAX_HISTORY_MESSAGES));
+      });
+    });
+  }
+
+  async function sendToApi(text, threadId) {
+    let messages;
+    if (threadId) {
+      messages = await getThreadHistory(threadId);
+      // The current user message is normally already persisted (last item).
+      // Only append it if it isn't, then re-cap — always ends with this message.
+      const last = messages[messages.length - 1];
+      if (!last || last.role !== "user" || last.content !== text) {
+        messages.push({ role: "user", content: text });
+        messages = messages.slice(-MAX_HISTORY_MESSAGES);
+      }
+    } else {
+      messages = [{ role: "user", content: text }];
+    }
+
     const payload = {
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: text }],
+      messages,
     };
     try {
       const res = await fetch("https://ai.prompt-in.com/api/chat", {
