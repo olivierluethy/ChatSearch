@@ -352,7 +352,9 @@ function sendGAEvent(eventName, params = {}) {
       {P} .cs-bubble--ai { background: var(--cs-neutral) !important; color: var(--cs-text) !important; }
       {P} .cs-timestamp { color: var(--cs-text-muted) !important; }
       {P} .cs-modal-content { background: var(--cs-surface) !important; color: var(--cs-text) !important; }
-      {P} .cs-modal-content h2, {P} .cs-modal-content h3, {P} .cs-modal-content strong { color: var(--cs-text) !important; }
+      {P} .cs-modal-content h2, {P} .cs-modal-content h3, {P} .cs-modal-content h4, {P} .cs-modal-content strong, {P} .cs-modal-content p, {P} .cs-modal-content li, {P} .cs-modal-content label, {P} .cs-modal-content span { color: var(--cs-text) !important; }
+      {P} .cs-modal-content input { background: var(--cs-surface) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
+      {P} .cs-modal-content a { color: var(--cs-primary) !important; }
       {P} .cs-search-input { background: var(--cs-surface) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
       {P} .cs-group-header { color: var(--cs-text-muted) !important; }
       {P} .cs-cloned-indicator { background: var(--cs-sidebar) !important; border-color: var(--cs-border) !important; color: var(--cs-text-muted) !important; }
