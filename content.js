@@ -357,6 +357,10 @@ function sendGAEvent(eventName, params = {}) {
       {P} .cs-group-header { color: var(--cs-text-muted) !important; }
       {P} .cs-cloned-indicator { background: var(--cs-sidebar) !important; border-color: var(--cs-border) !important; color: var(--cs-text-muted) !important; }
       {P} .cs-context-banner { background: var(--cs-sidebar) !important; border-color: var(--cs-border) !important; color: var(--cs-text) !important; }
+      {P} #cs-search-wrap svg { stroke: var(--cs-text-muted) !important; }
+      {P} .cs-search-input::placeholder { color: var(--cs-text-muted) !important; }
+      {P} .cs-thread-action--delete:hover { color: var(--cs-danger) !important; }
+      {P} .cs-thread-action--clone:hover, {P} .cs-thread-action--rename:hover { color: var(--cs-primary) !important; }
       {P} mark.cs-hit { background: var(--cs-active) !important; color: var(--cs-text) !important; }`;
 
     const darkExplicit = darkBody.replace(/\{P\}/g, `${R}[data-theme="dark"]`);
@@ -369,6 +373,8 @@ function sendGAEvent(eventName, params = {}) {
     style.id = "cs-theme-styles";
     style.textContent = `
       ${lightVars}
+      ${R} #settings-btn:hover, ${R} #toggle-sidebar-btn:hover { background: var(--cs-hover); }
+      ${R} .cs-thread { border-radius: 8px; }
       ${R}[data-theme="dark"] { ${darkVarBody} }
       @media (prefers-color-scheme: dark) {
         ${R}[data-theme="auto"] { ${darkVarBody} }
@@ -2180,12 +2186,7 @@ if (isCollapsed) {
 
     const settingsBtn = document.getElementById("settings-btn");
     settingsBtn.addEventListener("click", openSettingsModal);
-    settingsBtn.addEventListener("mouseenter", () => {
-      settingsBtn.style.background = "#e2e8f0";
-    });
-    settingsBtn.addEventListener("mouseleave", () => {
-      settingsBtn.style.background = "none";
-    });
+    // hover handled by the themed CSS rule (#settings-btn:hover)
 
     // Issue #8 — export the active chat as PDF.
     const exportChatBtn = document.getElementById("export-chat-btn");
