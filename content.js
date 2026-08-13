@@ -366,6 +366,103 @@ function sendGAEvent(eventName, params = {}) {
     }, 3000);
   }
 
+  // =========================================================================
+  // Issue #6 — Draggable panel (drag handle = sidebar header)
+  // =========================================================================
+  function clampToViewport(container, left, top) {
+    const rect = container.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth - rect.width);
+    const maxTop = Math.max(0, window.innerHeight - rect.height);
+    return {
+      left: Math.min(Math.max(0, left), maxLeft),
+      top: Math.min(Math.max(0, top), maxTop),
+    };
+  }
+
+  function setupDragging(container) {
+    const handle = document.getElementById("sidebar-header");
+    if (!handle) return;
+
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startLeft = 0;
+    let startTop = 0;
+    let pendingLeft = 0;
+    let pendingTop = 0;
+    let rafId = null;
+
+    function applyPending() {
+      rafId = null;
+      const pos = clampToViewport(container, pendingLeft, pendingTop);
+      container.style.left = pos.left + "px";
+      container.style.top = pos.top + "px";
+    }
+
+    handle.addEventListener("pointerdown", (e) => {
+      // Never start a drag from the header controls (settings / collapse).
+      if (e.target.closest("#sidebar-header-controls")) return;
+      if (e.button !== 0) return;
+
+      const rect = container.getBoundingClientRect();
+      // Switch from translate-centering to explicit px positioning.
+      container.style.transform = "none";
+      container.style.left = rect.left + "px";
+      container.style.top = rect.top + "px";
+      container.style.transition = "none"; // no lag while dragging
+
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      pendingLeft = rect.left;
+      pendingTop = rect.top;
+      handle.style.cursor = "grabbing";
+      try {
+        handle.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      e.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      pendingLeft = startLeft + (e.clientX - startX);
+      pendingTop = startTop + (e.clientY - startY);
+      if (rafId == null) rafId = requestAnimationFrame(applyPending);
+    });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      handle.style.cursor = "grab";
+      try {
+        handle.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+        applyPending();
+      }
+      container.style.transition = "all 0.3s ease"; // restore collapse anim
+      const pos = clampToViewport(container, pendingLeft, pendingTop);
+      chrome.storage.local.set({ panelPosition: pos });
+    }
+
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+  }
+
+  function restorePanelPosition(container) {
+    chrome.storage.local.get({ panelPosition: null }, (r) => {
+      const p = r.panelPosition;
+      if (!p || typeof p.left !== "number" || typeof p.top !== "number") return;
+      container.style.transform = "none";
+      const pos = clampToViewport(container, p.left, p.top);
+      container.style.left = pos.left + "px";
+      container.style.top = pos.top + "px";
+    });
+  }
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
 
@@ -419,7 +516,7 @@ function sendGAEvent(eventName, params = {}) {
           /* height hier auf 100% setzen, da es nun einen fixierten Elter hat */
           height: 100%; 
         ">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div id="sidebar-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; cursor: grab; user-select: none;">
   <h3 id="threads-title" style="
   margin: 0;
   font-size: 1.25rem;
@@ -1725,6 +1822,10 @@ if (isCollapsed) {
     });
 
     window.addEventListener("resize", adjustThreadsContainerHeight);
+
+    // Issue #6 — make the panel draggable by its header and restore last position.
+    setupDragging(uiContainer);
+    restorePanelPosition(uiContainer);
   }
 
   // Issue #4 — Context awareness: forward the active thread's history so the
