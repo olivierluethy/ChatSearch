@@ -337,6 +337,9 @@ function sendGAEvent(eventName, params = {}) {
       {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn, {P} #export-chat-btn { background: var(--cs-neutral) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
       {P} #report-bug-btn:hover, {P} #get-help-btn:hover, {P} #privacy-policy-btn:hover, {P} #feature-request-btn:hover, {P} #export-chat-btn:hover { background: var(--cs-neutral-hover) !important; }
       {P} #report-bug-btn svg, {P} #get-help-btn svg, {P} #privacy-policy-btn svg, {P} #feature-request-btn svg, {P} #export-chat-btn svg { stroke: currentColor !important; }
+      {P} #new-thread-btn, {P} #clear-history, {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn { width: 100% !important; box-sizing: border-box !important; padding: 10px 12px !important; font-size: 0.9rem !important; }
+      {P} #new-thread-btn:active, {P} #clear-history:active, {P} #report-bug-btn:active, {P} #get-help-btn:active, {P} #privacy-policy-btn:active, {P} #feature-request-btn:active { transform: translateY(1px); }
+      {P} #new-thread-btn:focus-visible, {P} #clear-history:focus-visible, {P} #report-bug-btn:focus-visible, {P} #get-help-btn:focus-visible, {P} #privacy-policy-btn:focus-visible, {P} #feature-request-btn:focus-visible { outline: 2px solid var(--cs-primary) !important; outline-offset: 2px; }
       {P} #main-content { background: var(--cs-surface) !important; }
       {P} #chat-display { background: var(--cs-chat-bg) !important; scrollbar-color: var(--cs-scroll-thumb) var(--cs-scroll-track) !important; }
       {P} #custom-ai-input { background: var(--cs-surface) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
