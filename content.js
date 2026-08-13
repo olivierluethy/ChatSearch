@@ -494,6 +494,16 @@ function sendGAEvent(eventName, params = {}) {
 
     handle.addEventListener("pointerup", endDrag);
     handle.addEventListener("pointercancel", endDrag);
+
+    // Issue #1 — never leave the panel stranded off-screen after a viewport resize.
+    window.addEventListener("resize", () => {
+      if (container.style.transform !== "none") return; // still translate-centred
+      const left = parseFloat(container.style.left) || 0;
+      const top = parseFloat(container.style.top) || 0;
+      const pos = clampToViewport(container, left, top);
+      container.style.left = pos.left + "px";
+      container.style.top = pos.top + "px";
+    });
   }
 
   function restorePanelPosition(container) {
@@ -682,7 +692,7 @@ function sendGAEvent(eventName, params = {}) {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         color: #1e293b;
-        height: 80%; /* Wichtig, um die 90vh/maxHeight des äußeren Containers zu nutzen */
+        height: 100%; /* Fill the container so the card's bottom edge can meet the viewport bottom */
         overflow: hidden;
       ">
         <div id="sidebar" style="
