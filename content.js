@@ -1001,7 +1001,7 @@ function sendGAEvent(eventName, params = {}) {
     // Optionale Anpassung: Setzen Sie die Gesamtgröße fest, damit das "translate" funktioniert
     // Dies stellt sicher, dass es auf allen Bildschirmen gut aussieht
     uiContainer.style.maxWidth = "1200px"; // Maximale Breite beibehalten
-    uiContainer.style.height = "80vh"; // Nehmen Sie 90% der Viewport-Höhe ein (damit es passt)
+    uiContainer.style.height = "80dvh"; // Dynamic viewport height so mobile browser chrome doesn't cause clipping
     uiContainer.style.maxHeight = "900px"; // Optional: Eine maximale Höhe
     
     uiContainer.innerHTML = `
