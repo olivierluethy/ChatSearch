@@ -63,6 +63,36 @@ function sendGAEvent(eventName, params = {}) {
     </svg>
   `;
 
+  // Issue #9 — custom AI avatar via URL. Cached so the typing indicator and
+  // freshly rendered messages use the latest applied image.
+  let currentAvatarUrl = "";
+
+  function isHttpUrl(u) {
+    return typeof u === "string" && /^https?:\/\//i.test(u.trim());
+  }
+
+  // Build the AI avatar as a real node (inline onerror is blocked by page CSP,
+  // so the SVG fallback is wired with addEventListener).
+  function createAiAvatarNode(url) {
+    const src = url == null ? currentAvatarUrl : url;
+    if (isHttpUrl(src)) {
+      const img = document.createElement("img");
+      img.src = src.trim();
+      img.alt = "AI";
+      img.style.cssText =
+        "width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;";
+      img.addEventListener("error", () => {
+        const span = document.createElement("span");
+        span.innerHTML = aiIcon;
+        if (img.parentNode) img.replaceWith(span);
+      });
+      return img;
+    }
+    const span = document.createElement("span");
+    span.innerHTML = aiIcon;
+    return span;
+  }
+
   // =========================================================================
   // Issue #10 — Markdown rendering, code highlighting, and copy buttons
   // =========================================================================
@@ -1446,6 +1476,107 @@ if (isCollapsed) {
         section.appendChild(row);
         modal.appendChild(section);
 
+        // --- AI avatar (#9) ---
+        const avatarSection = document.createElement("div");
+        avatarSection.style.marginBottom = "20px";
+        const avTitle = document.createElement("h3");
+        avTitle.textContent = "AI avatar";
+        avTitle.style.cssText =
+          "margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #1e293b;";
+        const avDesc = document.createElement("p");
+        avDesc.textContent =
+          "Paste an image URL (http/https) to use as the AI's profile picture.";
+        avDesc.style.cssText =
+          "margin: 0 0 12px; font-size: 0.85rem; color: #64748b; line-height: 1.5;";
+
+        const avRow = document.createElement("div");
+        avRow.style.cssText = "display: flex; align-items: center; gap: 12px;";
+
+        const preview = document.createElement("div");
+        preview.style.cssText =
+          "width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex: 0 0 auto; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; background: #f8fafc;";
+        function renderPreview(url) {
+          preview.innerHTML = "";
+          const node = createAiAvatarNode(isHttpUrl(url) ? url : "");
+          if (node.tagName === "IMG") {
+            node.style.width = "48px";
+            node.style.height = "48px";
+          }
+          preview.appendChild(node);
+        }
+        renderPreview(settings.aiAvatarUrl);
+
+        const avInputWrap = document.createElement("div");
+        avInputWrap.style.cssText =
+          "flex: 1; display: flex; flex-direction: column; gap: 8px;";
+        const avInput = document.createElement("input");
+        avInput.type = "text";
+        avInput.placeholder = "https://example.com/avatar.png";
+        avInput.value = settings.aiAvatarUrl || "";
+        avInput.style.cssText =
+          "padding: 10px 12px; font-size: 0.9rem; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box; width: 100%;";
+        avInput.addEventListener("input", () => renderPreview(avInput.value));
+        avInput.addEventListener("focus", () => {
+          avInput.style.borderColor = "#2563eb";
+          avInput.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.2)";
+        });
+        avInput.addEventListener("blur", () => {
+          avInput.style.borderColor = "#d1d5db";
+          avInput.style.boxShadow = "none";
+        });
+
+        const avBtnRow = document.createElement("div");
+        avBtnRow.style.cssText =
+          "display: flex; gap: 8px; align-items: center;";
+        const applyBtn = document.createElement("button");
+        applyBtn.type = "button";
+        applyBtn.textContent = "Apply";
+        applyBtn.style.cssText =
+          "padding: 8px 16px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500;";
+        const resetAvatarBtn = document.createElement("button");
+        resetAvatarBtn.type = "button";
+        resetAvatarBtn.textContent = "Reset";
+        resetAvatarBtn.style.cssText =
+          "padding: 8px 16px; background: #e5e7eb; color: #1e293b; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500;";
+        const avStatus = document.createElement("span");
+        avStatus.style.cssText = "font-size: 0.8rem; color: #64748b;";
+
+        function applyAvatar(url) {
+          const val = (url || "").trim();
+          if (val && !isHttpUrl(val)) {
+            avStatus.style.color = "#dc2626";
+            avStatus.textContent = "Enter a valid http(s) URL.";
+            return;
+          }
+          saveSettings({ aiAvatarUrl: val }).then(() => {
+            currentAvatarUrl = val;
+            avStatus.style.color = "#0f766e";
+            avStatus.textContent = val ? "Applied!" : "Reset to default.";
+            chrome.storage.local.get({ threads: [] }, (r) => {
+              const active = r.threads.find((t) => t.isActive === "yes");
+              if (active) renderChatMessages(active.id, false);
+            });
+          });
+        }
+        applyBtn.addEventListener("click", () => applyAvatar(avInput.value));
+        resetAvatarBtn.addEventListener("click", () => {
+          avInput.value = "";
+          renderPreview("");
+          applyAvatar("");
+        });
+
+        avBtnRow.appendChild(applyBtn);
+        avBtnRow.appendChild(resetAvatarBtn);
+        avBtnRow.appendChild(avStatus);
+        avInputWrap.appendChild(avInput);
+        avInputWrap.appendChild(avBtnRow);
+        avRow.appendChild(preview);
+        avRow.appendChild(avInputWrap);
+        avatarSection.appendChild(avTitle);
+        avatarSection.appendChild(avDesc);
+        avatarSection.appendChild(avRow);
+        modal.appendChild(avatarSection);
+
         const closeBtn = document.createElement("button");
         closeBtn.textContent = "Close";
         closeBtn.style.cssText = modalButtonStyles;
@@ -1674,7 +1805,15 @@ if (isCollapsed) {
       });
 
     function renderChatMessages(activeThreadId, animate = false) {
-      chrome.storage.local.get({ chats: [], threads: [] }, function (result) {
+      chrome.storage.local.get(
+        { chats: [], threads: [], settings: DEFAULT_SETTINGS },
+        function (result) {
+        const avatarSettings = Object.assign(
+          {},
+          DEFAULT_SETTINGS,
+          result.settings || {},
+        );
+        currentAvatarUrl = avatarSettings.aiAvatarUrl || "";
         const chatDisplay = document.getElementById("chat-display");
         const wasTyping =
           document.getElementById("typing-notification") !== null;
@@ -1754,7 +1893,7 @@ if (isCollapsed) {
             bubbleContainer.style.alignItems = "flex-start";
             messageBubble.style.background = "#e5e7eb";
             messageBubble.style.color = "#1e293b";
-            iconContainer.innerHTML = aiIcon;
+            iconContainer.appendChild(createAiAvatarNode());
           }
 
           bubbleContainer.appendChild(messageBubble);
@@ -1848,7 +1987,7 @@ if (isCollapsed) {
 
       const iconContainer = document.createElement("div");
       iconContainer.style.marginRight = "12px";
-      iconContainer.innerHTML = aiIcon;
+      iconContainer.appendChild(createAiAvatarNode());
 
       bubbleContainer.appendChild(typingBubble);
       typingElement.appendChild(iconContainer);
