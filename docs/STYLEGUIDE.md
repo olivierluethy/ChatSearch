@@ -211,3 +211,73 @@ transient "Copied!" label on success.
 
 ### Drag handle (Issue #6)
 Sidebar header acts as the handle; `cursor: grab` (→ `grabbing` while dragging). No new colours.
+
+---
+
+## 10. Dark mode (Round 2)
+
+The widget is themeable via a `data-theme` attribute on the root `#custom-ai-box`
+(`light` | `dark` | `auto`). `auto` follows `prefers-color-scheme`. The **light
+palette and typography in §1–§9 are unchanged** — dark mode only *adds* the token
+values below. Colours are delivered as CSS custom properties defined on the root and
+overridden under `[data-theme="dark"]` and `@media (prefers-color-scheme: dark)
+[data-theme="auto"]`.
+
+### Token map (light → dark)
+
+| Token | Role | Light | Dark |
+|---|---|---|---|
+| `--cs-grad-a` / `--cs-grad-b` | Panel gradient | `#ffffff` / `#f8fafc` | `#1f2937` / `#111827` |
+| `--cs-surface` | Main content, threads card, modal, inputs | `#ffffff` | `#111827` |
+| `--cs-sidebar` | Sidebar background | `#f1f5f9` | `#0f172a` |
+| `--cs-chat-bg` | Chat display, code surface (`#f8fafc`) | `#f8fafc` | `#0f172a` |
+| `--cs-border` | Dividers, borders (`#e2e8f0`) | `#e2e8f0` | `#334155` |
+| `--cs-border-strong` | Input/secondary borders (`#d1d5db`) | `#d1d5db` | `#475569` |
+| `--cs-neutral` | Secondary buttons, AI bubble (`#e5e7eb`) | `#e5e7eb` | `#334155` |
+| `--cs-neutral-hover` | Secondary hover (`#d1d5db`) | `#d1d5db` | `#475569` |
+| `--cs-text` | Primary text (`#1e293b`) | `#1e293b` | `#e2e8f0` |
+| `--cs-text-muted` | Muted text/icons (`#64748b`) | `#64748b` | `#94a3b8` |
+| `--cs-text-invert` | Text on coloured buttons | `#ffffff` | `#ffffff` |
+| `--cs-primary` | Primary blue (`#2563eb`) | `#2563eb` | `#3b82f6` |
+| `--cs-primary-hover` | Primary hover (`#1e40af`) | `#1e40af` | `#2563eb` |
+| `--cs-active` | Active thread (`#e3f2fd`) | `#e3f2fd` | `#1e3a5f` |
+| `--cs-active-hover` | Active thread hover (`#bfdbfe`) | `#bfdbfe` | `#274b7a` |
+| `--cs-hover` | Inactive row hover (`#f1f5f9`) | `#f1f5f9` | `#1e293b` |
+| `--cs-danger` | Danger red (`#dc2626`) | `#dc2626` | `#ef4444` |
+| `--cs-danger-hover` | Danger hover (`#b91c1c`) | `#b91c1c` | `#dc2626` |
+| `--cs-send` | Send green (`#25D366`) | `#25D366` | `#22c55e` |
+| `--cs-scroll-thumb` | Scrollbar thumb (`#94a3b8`) | `#94a3b8` | `#475569` |
+| `--cs-scroll-track` | Scrollbar track (`#e2e8f0`) | `#e2e8f0` | `#1e293b` |
+| `--cs-glow` | Panel outer shadow | `rgba(255,255,255,0.6)` | `rgba(0,0,0,0.55)` |
+
+### Syntax highlight (light → dark)
+
+| Scope | Light | Dark |
+|---|---|---|
+| keyword / built-in | `#2563eb` | `#60a5fa` |
+| string / added | `#0f766e` | `#34d399` |
+| number / literal | `#b45309` | `#fbbf24` |
+| comment | `#64748b` | `#94a3b8` |
+| function / title | `#1e40af` | `#818cf8` |
+| type / meta / tag | `#7c3aed` | `#c084fc` |
+| inline code bg | `#e5e7eb` | `#334155` |
+
+### Interactive states (Round 2 additions)
+
+- **Thread action icons** (clone / rename / delete): resting `--cs-text-muted`; on hover
+  the icon gains a circular hit background `--cs-hover` and its colour shifts to
+  `--cs-primary` (clone/rename) or `--cs-danger` (delete). Hit target ≥ 28×28px.
+- **Thread card hover** raises the whole row to `--cs-hover` (or `--cs-active-hover`
+  when active) and reveals the action row at full opacity.
+- **Search input**: same focus treatment as the message input (border `--cs-primary`,
+  ring `rgba(37,99,235,0.2)`).
+- **Resize handles**: 6px hit area; resting transparent, hover shows `--cs-primary` at
+  40% opacity; `cursor: col-resize` (column handle) / `nwse-resize` (corner handle).
+- **Search match highlight**: `<mark>` uses `--cs-active` background with `--cs-text`.
+
+### Date buckets (thread grouping)
+
+Group headers use `0.7rem`, weight 600, `--cs-text-muted`, uppercase, letter-spacing
+`0.04em`. Buckets, in order: **Today**, **Yesterday**, **Previous 7 days**,
+**Previous 30 days**, then **month-year** (e.g. "March 2026") for anything older,
+keyed on each thread's last-activity time.
