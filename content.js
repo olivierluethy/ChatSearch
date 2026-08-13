@@ -1058,6 +1058,25 @@ function sendGAEvent(eventName, params = {}) {
   </div>
 </div>
 
+          <div id="cs-search-wrap" style="position: relative; margin-bottom: 4px; flex: 0 0 auto;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input id="cs-thread-search" class="cs-search-input" type="text" placeholder="Search chats…" style="
+              width: 100%;
+              box-sizing: border-box;
+              padding: 8px 12px 8px 32px;
+              font-size: 0.85rem;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              outline: none;
+              color: #1e293b;
+              background: #ffffff;
+              transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            " />
+          </div>
+
           <div id="threads-container" style="
             flex: 1 1 auto;
             min-height: 80px;
@@ -1380,9 +1399,11 @@ if (isCollapsed) {
     mainContent.style.transition = "all 0.3s ease";
   }
 
-  // Hide the column resize handle while the sidebar is collapsed.
+  // Hide the column resize handle + search box while the sidebar is collapsed.
   const colHandle = document.getElementById("cs-col-resize");
   if (colHandle) colHandle.style.display = isCollapsed ? "none" : "block";
+  const searchWrap = document.getElementById("cs-search-wrap");
+  if (searchWrap) searchWrap.style.display = isCollapsed ? "none" : "block";
 });
 
     // Sanfte Animation für Hauptbereich
@@ -1843,6 +1864,26 @@ if (isCollapsed) {
       input.style.borderColor = "#d1d5db";
       input.style.boxShadow = "none";
     });
+
+    // Issue #7 — thread search box: filter threads by name + message text.
+    const searchInput = document.getElementById("cs-thread-search");
+    if (searchInput) {
+      searchInput.value = threadSearchQuery;
+      searchInput.addEventListener("input", () => {
+        threadSearchQuery = searchInput.value;
+        renderThreads(false);
+      });
+      // Don't let keystrokes bubble to page/global handlers.
+      searchInput.addEventListener("keydown", (e) => e.stopPropagation());
+      searchInput.addEventListener("focus", () => {
+        searchInput.style.borderColor = "#2563eb";
+        searchInput.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.2)";
+      });
+      searchInput.addEventListener("blur", () => {
+        searchInput.style.borderColor = "#d1d5db";
+        searchInput.style.boxShadow = "none";
+      });
+    }
 
     // Modals
     const modalStyles = `
@@ -2388,6 +2429,10 @@ if (isCollapsed) {
           (chat) => chat.threadId === activeThreadId,
         );
 
+        // Issue #7 — if we arrived here from a search result, scroll to the match.
+        let matchEl = null;
+        let matchBubble = null;
+
         threadChats.forEach((chat, index) => {
           const messageElement = document.createElement("div");
           messageElement.style.display = "flex";
@@ -2468,6 +2513,15 @@ if (isCollapsed) {
           messageElement.appendChild(
             chat.role === "user" ? iconContainer : bubbleContainer,
           );
+          if (
+            pendingScroll &&
+            pendingScroll.threadId === activeThreadId &&
+            !matchEl &&
+            chat.text === pendingScroll.matchText
+          ) {
+            matchEl = messageElement;
+            matchBubble = messageBubble;
+          }
           chatDisplay.appendChild(messageElement);
         });
 
@@ -2481,7 +2535,23 @@ if (isCollapsed) {
           hideTypingNotification();
         }
 
-        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        if (matchEl) {
+          // Scroll the matched message into view and flash it briefly.
+          requestAnimationFrame(() => {
+            matchEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          if (matchBubble) {
+            const prevShadow = matchBubble.style.boxShadow;
+            matchBubble.style.transition = "box-shadow 0.3s ease";
+            matchBubble.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.45)";
+            setTimeout(() => {
+              matchBubble.style.boxShadow = prevShadow || "none";
+            }, 1600);
+          }
+          pendingScroll = null;
+        } else {
+          chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
       });
     }
 
