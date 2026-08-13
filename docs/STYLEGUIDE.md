@@ -2,7 +2,8 @@
 
 **Status:** Source of truth for all UI work. Extracted verbatim from the shipped
 `content.js` (commit `c64b780`). Every new feature must match these tokens exactly.
-The product is **light-mode only** — do not introduce a dark theme.
+The light palette in §1–§9 is the baseline; §10 adds the Round 2 dark-mode tokens
+(the light values here are unchanged).
 
 > This document records what the extension *already looks like*. When adding features,
 > reuse these tokens. Do not restyle existing colours or typography.
