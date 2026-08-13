@@ -1872,6 +1872,41 @@ if (isCollapsed) {
       }
     });
 
+    // Custom tooltips for the sidebar action buttons. The native `title`
+    // tooltip is slow (~1s) and, worse, gets clipped by the sidebar's
+    // overflow:hidden — so render our own on document.body (above the clip)
+    // and position it in the viewport.
+    const csTooltip = document.createElement("div");
+    csTooltip.id = "cs-tooltip";
+    csTooltip.style.cssText =
+      "position:fixed;z-index:2147483647;background:#1e293b;color:#f8fafc;" +
+      "padding:5px 9px;border-radius:6px;font-size:0.75rem;font-weight:500;" +
+      "line-height:1.2;white-space:nowrap;pointer-events:none;opacity:0;" +
+      "transform:translate(-50%,-100%);transition:opacity 0.12s ease;" +
+      "box-shadow:0 4px 12px rgba(0,0,0,0.3);";
+    document.body.appendChild(csTooltip);
+
+    buttons.forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const tip = btn.getAttribute("title");
+      if (!tip) return;
+      // Move title -> aria-label so screen readers keep it and the native
+      // (slow, clipped) tooltip doesn't fire on top of ours.
+      btn.setAttribute("aria-label", tip);
+      btn.removeAttribute("title");
+      btn.addEventListener("mouseenter", () => {
+        csTooltip.textContent = tip;
+        const r = btn.getBoundingClientRect();
+        csTooltip.style.left = r.left + r.width / 2 + "px";
+        csTooltip.style.top = r.top - 8 + "px";
+        csTooltip.style.opacity = "1";
+      });
+      btn.addEventListener("mouseleave", () => {
+        csTooltip.style.opacity = "0";
+      });
+    });
+
     // Input focus state
     const input = document.getElementById("custom-ai-input");
     input.addEventListener("focus", () => {
