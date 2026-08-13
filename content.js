@@ -500,10 +500,15 @@ function sendGAEvent(eventName, params = {}) {
     chrome.storage.local.get({ panelPosition: null }, (r) => {
       const p = r.panelPosition;
       if (!p || typeof p.left !== "number" || typeof p.top !== "number") return;
+      const prevTransition = container.style.transition;
+      container.style.transition = "none"; // no animation from the default spot
       container.style.transform = "none";
       const pos = clampToViewport(container, p.left, p.top);
       container.style.left = pos.left + "px";
       container.style.top = pos.top + "px";
+      requestAnimationFrame(() => {
+        container.style.transition = prevTransition || "all 0.3s ease";
+      });
     });
   }
 
@@ -593,7 +598,7 @@ function sendGAEvent(eventName, params = {}) {
       title,
     )}</title><style>${styles}</style></head><body><h1 class="cs-print-title">${escapeHtml(
       title,
-    )}</h1>${innerHtml}<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};</script></body></html>`;
+    )}</h1>${innerHtml}</body></html>`;
   }
 
   function openPrintWindow(html) {
@@ -605,6 +610,17 @@ function sendGAEvent(eventName, params = {}) {
     w.document.open();
     w.document.write(html);
     w.document.close();
+    // Trigger printing from the opener — the child's inline scripts may be
+    // blocked by the host page's CSP, but cross-calling print() is allowed
+    // (the about:blank document is same-origin with this opener).
+    setTimeout(() => {
+      try {
+        w.focus();
+        w.print();
+      } catch (e) {
+        /* user can still print manually */
+      }
+    }, 400);
   }
 
   function exportMessageToPdf(chat) {
