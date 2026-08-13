@@ -1099,7 +1099,7 @@ function sendGAEvent(eventName, params = {}) {
 
           <div id="threads-container" style="
             flex: 1 1 auto;
-            min-height: 80px;
+            min-height: 0;
             overflow-y: auto;
             background: #ffffff;
             border-radius: 10px;
