@@ -401,7 +401,12 @@
         "*://www.google.pa/*",
         "*://www.google.pe/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "vendor/purify.min.js",
+        "vendor/marked.min.js",
+        "vendor/highlight.min.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
