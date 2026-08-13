@@ -704,7 +704,9 @@ function sendGAEvent(eventName, params = {}) {
           flex-direction: column;
           gap: 16px;
           /* height hier auf 100% setzen, da es nun einen fixierten Elter hat */
-          height: 100%; 
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
         ">
           <div id="sidebar-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; cursor: grab; user-select: none;">
   <h3 id="threads-title" style="
@@ -751,8 +753,8 @@ function sendGAEvent(eventName, params = {}) {
 </div>
 
           <div id="threads-container" style="
-            flex: 1;
-            /* Max-Height kann jetzt gelöscht oder angepasst werden, da der Elter die Höhe vorgibt */
+            flex: 1 1 auto;
+            min-height: 80px;
             overflow-y: auto;
             background: #ffffff;
             border-radius: 10px;
@@ -769,6 +771,7 @@ function sendGAEvent(eventName, params = {}) {
               color: #1e293b;
             "></ul>
           </div>
+          <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 16px; flex: 0 1 auto; min-height: 0; overflow-y: auto;">
           <button id="new-thread-btn" style="
             display: flex;
             align-items: center;
@@ -890,6 +893,7 @@ function sendGAEvent(eventName, params = {}) {
             </svg>
               Feature Request
             </button>
+          </div>
           </div>
         </div>
 
@@ -1071,14 +1075,12 @@ if (isCollapsed) {
     // Sanfte Animation für Hauptbereich
     uiContainer.style.transition = "all 0.3s ease";
 
-    // Dynamically adjust threads container height
+    // The threads list now sizes itself via flexbox (flex:1; min-height:0), so
+    // the old JS max-height hack is a no-op — clear any stale cap so the list
+    // and the button stack stay correctly sized after drag/resize/collapse.
     function adjustThreadsContainerHeight() {
-      const mainContent = document.getElementById("main-content");
       const threadsContainer = document.getElementById("threads-container");
-      if (mainContent && threadsContainer) {
-        const mainContentHeight = mainContent.getBoundingClientRect().height;
-        threadsContainer.style.maxHeight = `${mainContentHeight - 80}px`;
-      }
+      if (threadsContainer) threadsContainer.style.maxHeight = "none";
     }
 
     // Render threads with animation
