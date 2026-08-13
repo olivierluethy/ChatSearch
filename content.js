@@ -174,43 +174,43 @@ function sendGAEvent(eventName, params = {}) {
       .cs-md ul, .cs-md ol { margin: 0 0 8px; padding-left: 1.4em; }
       .cs-md li { margin: 2px 0; }
       .cs-md h1, .cs-md h2, .cs-md h3, .cs-md h4, .cs-md h5, .cs-md h6 {
-        margin: 8px 0 4px; font-weight: 600; line-height: 1.3; color: #1e293b;
+        margin: 8px 0 4px; font-weight: 600; line-height: 1.3; color: var(--cs-text, #1e293b);
       }
       .cs-md h1 { font-size: 1.15rem; }
       .cs-md h2 { font-size: 1.08rem; }
       .cs-md h3 { font-size: 1rem; }
       .cs-md h4, .cs-md h5, .cs-md h6 { font-size: 0.95rem; }
-      .cs-md a { color: #2563eb; text-decoration: underline; }
+      .cs-md a { color: var(--cs-primary, #2563eb); text-decoration: underline; }
       .cs-md blockquote {
         margin: 0 0 8px; padding: 4px 12px;
-        border-left: 3px solid #cbd5e1; color: #475569;
+        border-left: 3px solid var(--cs-border, #cbd5e1); color: var(--cs-text-muted, #475569);
       }
-      .cs-md hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+      .cs-md hr { border: none; border-top: 1px solid var(--cs-border, #e2e8f0); margin: 12px 0; }
       .cs-md :not(pre) > code {
-        background: #e5e7eb; color: #1e293b; padding: 1px 5px;
+        background: var(--cs-code-inline, #e5e7eb); color: var(--cs-text, #1e293b); padding: 1px 5px;
         border-radius: 4px; font-family: ${MONO_FONT}; font-size: 0.85em;
       }
       .cs-md table { border-collapse: collapse; margin: 0 0 8px; font-size: 0.9rem; }
-      .cs-md th, .cs-md td { border: 1px solid #e2e8f0; padding: 4px 8px; }
-      .cs-md th { background: #f1f5f9; }
+      .cs-md th, .cs-md td { border: 1px solid var(--cs-border, #e2e8f0); padding: 4px 8px; }
+      .cs-md th { background: var(--cs-sidebar, #f1f5f9); }
 
       .cs-code-wrap { position: relative; margin: 0 0 8px; }
       .cs-code-wrap pre {
-        margin: 0; background: #f8fafc; border: 1px solid #e2e8f0;
+        margin: 0; background: var(--cs-chat-bg, #f8fafc); border: 1px solid var(--cs-border, #e2e8f0);
         border-radius: 8px; padding: 12px 14px; overflow-x: auto;
       }
       .cs-code-wrap pre code {
         font-family: ${MONO_FONT}; font-size: 0.85rem; line-height: 1.5;
-        background: none; padding: 0; color: #1e293b;
+        background: none; padding: 0; color: var(--cs-text, #1e293b);
       }
 
       .cs-copy-btn {
-        background: #e5e7eb; color: #1e293b; border: none; border-radius: 6px;
+        background: var(--cs-neutral, #e5e7eb); color: var(--cs-text, #1e293b); border: none; border-radius: 6px;
         font-size: 0.75rem; font-weight: 500; padding: 4px 8px; cursor: pointer;
         transition: background 0.2s ease;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
-      .cs-copy-btn:hover { background: #d1d5db; }
+      .cs-copy-btn:hover { background: var(--cs-neutral-hover, #d1d5db); }
       .cs-code-copy {
         position: absolute; top: 8px; right: 8px; opacity: 0;
         transition: opacity 0.2s ease, background 0.2s ease;
@@ -219,17 +219,17 @@ function sendGAEvent(eventName, params = {}) {
       .cs-code-copy:focus { opacity: 1; }
       .cs-msg-copy { margin-top: 4px; align-self: flex-start; }
 
-      /* highlight.js theme — light, slate/blue (STYLEGUIDE §9) */
-      .hljs { color: #1e293b; background: transparent; }
-      .hljs-comment, .hljs-quote { color: #64748b; font-style: italic; }
+      /* highlight.js theme — driven by tokens (STYLEGUIDE §9/§10) */
+      .hljs { color: var(--cs-text, #1e293b); background: transparent; }
+      .hljs-comment, .hljs-quote { color: var(--cs-code-com, #64748b); font-style: italic; }
       .hljs-keyword, .hljs-selector-tag, .hljs-built_in,
-      .hljs-name, .hljs-literal { color: #2563eb; }
-      .hljs-string, .hljs-addition, .hljs-regexp, .hljs-symbol { color: #0f766e; }
-      .hljs-number, .hljs-meta .hljs-number, .hljs-bullet, .hljs-link { color: #b45309; }
-      .hljs-title, .hljs-title.function_, .hljs-section { color: #1e40af; font-weight: 500; }
-      .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable { color: #1e293b; }
-      .hljs-type, .hljs-class .hljs-title, .hljs-tag, .hljs-meta { color: #7c3aed; }
-      .hljs-deletion { color: #b91c1c; }
+      .hljs-name, .hljs-literal { color: var(--cs-code-kw, #2563eb); }
+      .hljs-string, .hljs-addition, .hljs-regexp, .hljs-symbol { color: var(--cs-code-str, #0f766e); }
+      .hljs-number, .hljs-meta .hljs-number, .hljs-bullet, .hljs-link { color: var(--cs-code-num, #b45309); }
+      .hljs-title, .hljs-title.function_, .hljs-section { color: var(--cs-code-fn, #1e40af); font-weight: 500; }
+      .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable { color: var(--cs-text, #1e293b); }
+      .hljs-type, .hljs-class .hljs-title, .hljs-tag, .hljs-meta { color: var(--cs-code-type, #7c3aed); }
+      .hljs-deletion { color: var(--cs-danger, #b91c1c); }
       .hljs-emphasis { font-style: italic; }
       .hljs-strong { font-weight: 700; }
     `;
@@ -276,7 +276,111 @@ function sendGAEvent(eventName, params = {}) {
   // =========================================================================
   // Issues #1 / #9 — persisted user settings
   // =========================================================================
-  const DEFAULT_SETTINGS = { newChatPerSearch: false, aiAvatarUrl: "" };
+  const DEFAULT_SETTINGS = {
+    newChatPerSearch: false,
+    aiAvatarUrl: "",
+    theme: "auto", // "light" | "dark" | "auto"
+  };
+
+  // Inject the theme token sheet once: light variables on the root, dark values
+  // under [data-theme="dark"] and auto-dark via prefers-color-scheme. Legacy
+  // inline colours are overridden in dark only, so the light UI is untouched.
+  function injectThemeStyles() {
+    if (document.getElementById("cs-theme-styles")) return;
+    const R = "#custom-ai-box";
+    const lightVars = `
+      ${R} {
+        --cs-grad-a:#ffffff; --cs-grad-b:#f8fafc;
+        --cs-surface:#ffffff; --cs-sidebar:#f1f5f9; --cs-chat-bg:#f8fafc;
+        --cs-border:#e2e8f0; --cs-border-strong:#d1d5db;
+        --cs-neutral:#e5e7eb; --cs-neutral-hover:#d1d5db;
+        --cs-text:#1e293b; --cs-text-muted:#64748b;
+        --cs-primary:#2563eb; --cs-primary-hover:#1e40af;
+        --cs-active:#e3f2fd; --cs-active-hover:#bfdbfe; --cs-hover:#f1f5f9;
+        --cs-danger:#dc2626; --cs-danger-hover:#b91c1c;
+        --cs-scroll-thumb:#94a3b8; --cs-scroll-track:#e2e8f0;
+        --cs-code-kw:#2563eb; --cs-code-str:#0f766e; --cs-code-num:#b45309;
+        --cs-code-com:#64748b; --cs-code-fn:#1e40af; --cs-code-type:#7c3aed;
+        --cs-code-inline:#e5e7eb;
+      }`;
+    const darkVarBody = `
+        --cs-grad-a:#1f2937; --cs-grad-b:#111827;
+        --cs-surface:#111827; --cs-sidebar:#0f172a; --cs-chat-bg:#0f172a;
+        --cs-border:#334155; --cs-border-strong:#475569;
+        --cs-neutral:#334155; --cs-neutral-hover:#475569;
+        --cs-text:#e2e8f0; --cs-text-muted:#94a3b8;
+        --cs-primary:#3b82f6; --cs-primary-hover:#2563eb;
+        --cs-active:#1e3a5f; --cs-active-hover:#274b7a; --cs-hover:#1e293b;
+        --cs-danger:#ef4444; --cs-danger-hover:#dc2626;
+        --cs-scroll-thumb:#475569; --cs-scroll-track:#1e293b;
+        --cs-code-kw:#60a5fa; --cs-code-str:#34d399; --cs-code-num:#fbbf24;
+        --cs-code-com:#94a3b8; --cs-code-fn:#818cf8; --cs-code-type:#c084fc;
+        --cs-code-inline:#334155;`;
+
+    // Dark overrides for legacy inline-styled elements + dynamic classes.
+    // {P} is replaced with the theme-scoped prefix.
+    const darkBody = `
+      {P} > div:first-child { background: linear-gradient(145deg, var(--cs-grad-a), var(--cs-grad-b)) !important; color: var(--cs-text) !important; }
+      {P} #sidebar { background: var(--cs-sidebar) !important; border-right-color: var(--cs-border) !important; }
+      {P} #threads-title, {P} #main-content h2 { color: var(--cs-text) !important; }
+      {P} #sidebar-header svg { stroke: var(--cs-text-muted) !important; }
+      {P} #threads-container { background: var(--cs-surface) !important; scrollbar-color: var(--cs-scroll-thumb) var(--cs-scroll-track) !important; }
+      {P} #threads { color: var(--cs-text) !important; }
+      {P} #new-thread-btn { background: var(--cs-primary) !important; }
+      {P} #new-thread-btn:hover { background: var(--cs-primary-hover) !important; }
+      {P} #clear-history { background: var(--cs-danger) !important; }
+      {P} #clear-history:hover { background: var(--cs-danger-hover) !important; }
+      {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn, {P} #export-chat-btn { background: var(--cs-neutral) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
+      {P} #report-bug-btn:hover, {P} #get-help-btn:hover, {P} #privacy-policy-btn:hover, {P} #feature-request-btn:hover, {P} #export-chat-btn:hover { background: var(--cs-neutral-hover) !important; }
+      {P} #report-bug-btn svg, {P} #get-help-btn svg, {P} #privacy-policy-btn svg, {P} #feature-request-btn svg, {P} #export-chat-btn svg { stroke: currentColor !important; }
+      {P} #main-content { background: var(--cs-surface) !important; }
+      {P} #chat-display { background: var(--cs-chat-bg) !important; scrollbar-color: var(--cs-scroll-thumb) var(--cs-scroll-track) !important; }
+      {P} #custom-ai-input { background: var(--cs-surface) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
+      {P} #custom-ai-input::placeholder { color: var(--cs-text-muted) !important; }
+      {P} .cs-thread { border-bottom-color: var(--cs-border) !important; }
+      {P} .cs-thread:hover { background: var(--cs-hover) !important; }
+      {P} .cs-thread--active { background: var(--cs-active) !important; }
+      {P} .cs-thread--active:hover { background: var(--cs-active-hover) !important; }
+      {P} .cs-thread-name { color: var(--cs-text) !important; }
+      {P} .cs-thread-meta, {P} .cs-thread-snippet { color: var(--cs-text-muted) !important; }
+      {P} .cs-thread-action { color: var(--cs-text-muted) !important; }
+      {P} .cs-thread-action:hover { background: var(--cs-hover) !important; }
+      {P} .cs-bubble--ai { background: var(--cs-neutral) !important; color: var(--cs-text) !important; }
+      {P} .cs-timestamp { color: var(--cs-text-muted) !important; }
+      {P} .cs-modal-content { background: var(--cs-surface) !important; color: var(--cs-text) !important; }
+      {P} .cs-modal-content h2, {P} .cs-modal-content h3, {P} .cs-modal-content strong { color: var(--cs-text) !important; }
+      {P} .cs-search-input { background: var(--cs-surface) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
+      {P} .cs-group-header { color: var(--cs-text-muted) !important; }
+      {P} .cs-cloned-indicator { background: var(--cs-sidebar) !important; border-color: var(--cs-border) !important; color: var(--cs-text-muted) !important; }
+      {P} .cs-context-banner { background: var(--cs-sidebar) !important; border-color: var(--cs-border) !important; color: var(--cs-text) !important; }
+      {P} mark.cs-hit { background: var(--cs-active) !important; color: var(--cs-text) !important; }`;
+
+    const darkExplicit = darkBody.replace(/\{P\}/g, `${R}[data-theme="dark"]`);
+    const darkAuto = darkBody.replace(
+      /\{P\}/g,
+      `${R}[data-theme="auto"]`,
+    );
+
+    const style = document.createElement("style");
+    style.id = "cs-theme-styles";
+    style.textContent = `
+      ${lightVars}
+      ${R}[data-theme="dark"] { ${darkVarBody} }
+      @media (prefers-color-scheme: dark) {
+        ${R}[data-theme="auto"] { ${darkVarBody} }
+      }
+      ${darkExplicit}
+      @media (prefers-color-scheme: dark) {
+        ${darkAuto}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function applyTheme(theme) {
+    const box = document.getElementById(CONTAINER_ID);
+    if (box) box.setAttribute("data-theme", theme || "auto");
+  }
 
   function getSettings() {
     return new Promise((resolve) => {
@@ -318,6 +422,7 @@ function sendGAEvent(eventName, params = {}) {
     if (document.getElementById("cs-context-banner")) return;
     const banner = document.createElement("div");
     banner.id = "cs-context-banner";
+    banner.className = "cs-context-banner";
     banner.style.cssText = `
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
@@ -833,7 +938,9 @@ function sendGAEvent(eventName, params = {}) {
 
     const uiContainer = document.createElement("div");
     uiContainer.id = CONTAINER_ID;
-    
+    uiContainer.setAttribute("data-theme", "auto"); // Round 2 — theming root
+    injectThemeStyles();
+
     // *************************************************************
     // 🌟 WICHTIG: NEUE STYLES FÜR FIXED POSITIONIERUNG UND ZENTRIERUNG
     // *************************************************************
@@ -1158,6 +1265,9 @@ function sendGAEvent(eventName, params = {}) {
     `;
 
     targetDiv.insertBefore(uiContainer, targetDiv.firstChild);
+
+    // Round 2 — apply the saved theme (light / dark / auto).
+    getSettings().then((s) => applyTheme(s.theme));
 
         // === Burger Button: Sidebar ein-/ausklappen ===
     const sidebar = document.getElementById("sidebar");
@@ -1641,12 +1751,65 @@ if (isCollapsed) {
         overlay.style.cssText = modalStyles;
         const modal = document.createElement("div");
         modal.style.cssText = modalContentStyles;
+        modal.className = "cs-modal-content";
 
         const title = document.createElement("h2");
         title.textContent = "Settings";
         title.style.cssText =
           "margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;";
         modal.appendChild(title);
+
+        // --- Appearance / theme (Round 2) ---
+        const themeSection = document.createElement("div");
+        themeSection.style.marginBottom = "20px";
+        const themeTitle = document.createElement("h3");
+        themeTitle.textContent = "Appearance";
+        themeTitle.style.cssText =
+          "margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #1e293b;";
+        const themeDesc = document.createElement("p");
+        themeDesc.textContent =
+          "Choose Light, Dark, or Auto (follow your system).";
+        themeDesc.style.cssText =
+          "margin: 0 0 12px; font-size: 0.85rem; color: #64748b; line-height: 1.5;";
+        const seg = document.createElement("div");
+        seg.style.cssText =
+          "display: inline-flex; border: 1px solid var(--cs-border-strong, #d1d5db); border-radius: 8px; overflow: hidden;";
+        const themeOptions = [
+          ["light", "Light"],
+          ["dark", "Dark"],
+          ["auto", "Auto"],
+        ];
+        const segButtons = {};
+        function paintSeg(active) {
+          themeOptions.forEach(([val]) => {
+            const b = segButtons[val];
+            const on = val === active;
+            b.style.background = on ? "var(--cs-primary, #2563eb)" : "transparent";
+            b.style.color = on ? "#ffffff" : "var(--cs-text, #1e293b)";
+          });
+        }
+        themeOptions.forEach(([val, label], i) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.style.cssText =
+            "padding: 8px 16px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: background 0.2s ease;" +
+            (i > 0
+              ? " border-left: 1px solid var(--cs-border-strong, #d1d5db);"
+              : "");
+          b.addEventListener("click", () => {
+            applyTheme(val);
+            saveSettings({ theme: val });
+            paintSeg(val);
+          });
+          segButtons[val] = b;
+          seg.appendChild(b);
+        });
+        paintSeg(settings.theme || "auto");
+        themeSection.appendChild(themeTitle);
+        themeSection.appendChild(themeDesc);
+        themeSection.appendChild(seg);
+        modal.appendChild(themeSection);
 
         // --- Google search behaviour (#1) ---
         const section = document.createElement("div");
@@ -1907,6 +2070,7 @@ if (isCollapsed) {
       overlay.style.cssText = modalStyles;
       const modal = document.createElement("div");
       modal.style.cssText = modalContentStyles;
+        modal.className = "cs-modal-content";
       modal.innerHTML = `
         <h2 style="margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;">How we can help</h2>
         <p style="font-size: 0.95rem; line-height: 1.5;">
@@ -1939,6 +2103,7 @@ if (isCollapsed) {
         overlay.style.cssText = modalStyles;
         const modal = document.createElement("div");
         modal.style.cssText = modalContentStyles;
+        modal.className = "cs-modal-content";
         modal.innerHTML = `
         <h2 style="margin: 0 0 16px; font-size: 1.5rem; font-weight: 600;">Privacy Policy</h2>
         <p style="font-size: 0.95rem; line-height: 1.5;">
@@ -2070,6 +2235,8 @@ if (isCollapsed) {
           messageBubble.style.wordBreak = "break-word";
           messageBubble.style.fontSize = "0.95rem";
           messageBubble.style.lineHeight = "1.5";
+          messageBubble.className =
+            "cs-bubble cs-bubble--" + (chat.role === "user" ? "user" : "ai");
           // Issue #10 — render AI Markdown/code; keep user input as plain text.
           if (chat.role === "user") {
             messageBubble.textContent = chat.text;
@@ -2078,6 +2245,7 @@ if (isCollapsed) {
           }
 
           const timestamp = document.createElement("div");
+          timestamp.className = "cs-timestamp";
           timestamp.style.fontSize = "0.75rem";
           timestamp.style.color = "#64748b";
           timestamp.style.marginTop = "4px";
