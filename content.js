@@ -337,7 +337,7 @@ function sendGAEvent(eventName, params = {}) {
       {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn, {P} #export-chat-btn { background: var(--cs-neutral) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
       {P} #report-bug-btn:hover, {P} #get-help-btn:hover, {P} #privacy-policy-btn:hover, {P} #feature-request-btn:hover, {P} #export-chat-btn:hover { background: var(--cs-neutral-hover) !important; }
       {P} #report-bug-btn svg, {P} #get-help-btn svg, {P} #privacy-policy-btn svg, {P} #feature-request-btn svg, {P} #export-chat-btn svg { stroke: currentColor !important; }
-      {P} #new-thread-btn, {P} #clear-history, {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn { width: 100% !important; box-sizing: border-box !important; padding: 10px 12px !important; font-size: 0.9rem !important; }
+      {P} #new-thread-btn, {P} #clear-history, {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn { flex: 1 1 0 !important; min-width: 0 !important; box-sizing: border-box !important; padding: 10px !important; font-size: 0.9rem !important; }
       {P} #new-thread-btn:active, {P} #clear-history:active, {P} #report-bug-btn:active, {P} #get-help-btn:active, {P} #privacy-policy-btn:active, {P} #feature-request-btn:active { transform: translateY(1px); }
       {P} #new-thread-btn:focus-visible, {P} #clear-history:focus-visible, {P} #report-bug-btn:focus-visible, {P} #get-help-btn:focus-visible, {P} #privacy-policy-btn:focus-visible, {P} #feature-request-btn:focus-visible { outline: 2px solid var(--cs-primary) !important; outline-offset: 2px; }
       {P} #main-content { background: var(--cs-surface) !important; }
@@ -1117,7 +1117,8 @@ function sendGAEvent(eventName, params = {}) {
             "></ul>
           </div>
           <div id="sidebar-actions" style="display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto;">
-          <button id="new-thread-btn" style="
+          <div style="display: flex; gap: 8px;">
+          <button id="new-thread-btn" title="Start a new chat" style="
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1137,7 +1138,7 @@ function sendGAEvent(eventName, params = {}) {
             </svg>
             New Chat
           </button>
-          <button id="clear-history" style="
+          <button id="clear-history" title="Clear all chats" style="
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1157,8 +1158,9 @@ function sendGAEvent(eventName, params = {}) {
             </svg>
             Clear All
           </button>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <button id="report-bug-btn" style="
+          </div>
+          <div style="display: flex; flex-direction: row; gap: 8px;">
+            <button id="report-bug-btn" title="Report a bug" style="
               padding: 8px;
               background: #e5e7eb;
               color: #1e293b;
@@ -1176,9 +1178,8 @@ function sendGAEvent(eventName, params = {}) {
               <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              Report Bug
             </button>
-            <button id="get-help-btn" style="
+            <button id="get-help-btn" title="Get help" style="
               padding: 8px;
               background: #e5e7eb;
               color: #1e293b;
@@ -1196,9 +1197,8 @@ function sendGAEvent(eventName, params = {}) {
               <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
               </svg>
-              Get Help
             </button>
-            <button id="privacy-policy-btn" style="
+            <button id="privacy-policy-btn" title="Privacy policy" style="
               padding: 8px;
               background: #e5e7eb;
               color: #1e293b;
@@ -1216,9 +1216,8 @@ function sendGAEvent(eventName, params = {}) {
               <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
               </svg>
-              Privacy Policy
             </button>
-            <button id="feature-request-btn" style="
+            <button id="feature-request-btn" title="Request a feature" style="
               padding: 8px;
               background: #e5e7eb;
               color: #1e293b;
@@ -1236,7 +1235,6 @@ function sendGAEvent(eventName, params = {}) {
               <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/>
             </svg>
-              Feature Request
             </button>
           </div>
           </div>
