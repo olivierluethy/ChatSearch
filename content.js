@@ -256,6 +256,116 @@ function sendGAEvent(eventName, params = {}) {
     });
   }
 
+  // =========================================================================
+  // Issue #3 — Extension-context-invalidated guard
+  // After the extension is reloaded/updated, chrome.* calls in this old content
+  // script throw "Extension context invalidated" and chrome.runtime.id becomes
+  // undefined. Detect that and prompt the user to reload the page.
+  // =========================================================================
+  function isContextValid() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showContextInvalidatedBanner() {
+    if (document.getElementById("cs-context-banner")) return;
+    const banner = document.createElement("div");
+    banner.id = "cs-context-banner";
+    banner.style.cssText = `
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 12px; color: #1e293b; font-size: 0.9rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    const msg = document.createElement("span");
+    msg.textContent = "ChatSearch was updated — reload the page to continue.";
+    const reload = document.createElement("button");
+    reload.type = "button";
+    reload.textContent = "Reload";
+    reload.style.cssText = `
+      padding: 8px 16px; background: #2563eb; color: #ffffff; border: none;
+      border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+      white-space: nowrap; transition: background 0.2s ease;
+    `;
+    reload.addEventListener("mouseenter", () => {
+      reload.style.background = "#1e40af";
+    });
+    reload.addEventListener("mouseleave", () => {
+      reload.style.background = "#2563eb";
+    });
+    reload.addEventListener("click", () => location.reload());
+    banner.appendChild(msg);
+    banner.appendChild(reload);
+
+    const main = document.getElementById("main-content");
+    if (main) {
+      main.insertBefore(banner, main.firstChild);
+    } else {
+      banner.style.position = "fixed";
+      banner.style.top = "12px";
+      banner.style.left = "50%";
+      banner.style.transform = "translateX(-50%)";
+      banner.style.zIndex = "2147483647";
+      document.body.appendChild(banner);
+    }
+  }
+
+  function handlePossibleInvalidation(err) {
+    const message = err && (err.message || (typeof err === "string" ? err : ""));
+    if (!isContextValid() || (message && /context invalidated/i.test(message))) {
+      showContextInvalidatedBanner();
+      return true;
+    }
+    return false;
+  }
+
+  // Wrap chrome.storage.local so a thrown invalidation error surfaces the banner
+  // instead of silently breaking, without touching every call site.
+  function guardChromeStorage() {
+    try {
+      if (!(chrome && chrome.storage && chrome.storage.local)) return;
+      ["get", "set", "remove", "clear"].forEach((method) => {
+        const original = chrome.storage.local[method];
+        if (typeof original !== "function" || original.__csGuarded) return;
+        const guarded = function (...args) {
+          if (!isContextValid()) {
+            showContextInvalidatedBanner();
+            return;
+          }
+          try {
+            return original.apply(chrome.storage.local, args);
+          } catch (e) {
+            handlePossibleInvalidation(e);
+            throw e;
+          }
+        };
+        guarded.__csGuarded = true;
+        chrome.storage.local[method] = guarded;
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function startContextWatch() {
+    window.addEventListener("error", (e) => {
+      handlePossibleInvalidation(e.error || e.message);
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      handlePossibleInvalidation(e.reason);
+    });
+    // Lightweight periodic backstop.
+    const timer = setInterval(() => {
+      if (!isContextValid()) {
+        showContextInvalidatedBanner();
+        clearInterval(timer);
+      }
+    }, 3000);
+  }
+
   function createUI(targetDiv) {
     if (document.getElementById(CONTAINER_ID)) return;
 
@@ -1689,6 +1799,8 @@ if (isCollapsed) {
   });
 
   window.addEventListener("load", () => {
+    guardChromeStorage();
+    startContextWatch();
     const body = document.body;
     if (body) {
       observer.observe(body, { childList: true, subtree: true });
