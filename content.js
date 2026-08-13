@@ -67,6 +67,10 @@ function sendGAEvent(eventName, params = {}) {
   // freshly rendered messages use the latest applied image.
   let currentAvatarUrl = "";
 
+  // Round 2 — thread search state (module scope so helpers can read it).
+  let threadSearchQuery = "";
+  let pendingScroll = null; // { threadId, matchText } — scroll to a match on open
+
   function isHttpUrl(u) {
     return typeof u === "string" && /^https?:\/\//i.test(u.trim());
   }
@@ -812,6 +816,28 @@ function sendGAEvent(eventName, params = {}) {
       .replace(/'/g, "&#39;");
   }
 
+  // Round 2 — build a short, escaped snippet around the search match, with the
+  // matched query wrapped in <mark class="cs-hit">.
+  function highlightSnippet(text, matchText) {
+    const src = String(text == null ? "" : text);
+    const q = String(threadSearchQuery || "").trim();
+    if (!q) return escapeHtml(src.slice(0, 120));
+    const idx = src.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return escapeHtml(src.slice(0, 120));
+    const start = Math.max(0, idx - 30);
+    const end = Math.min(src.length, idx + q.length + 60);
+    const pre = (start > 0 ? "…" : "") + src.slice(start, idx);
+    const hit = src.slice(idx, idx + q.length);
+    const post = src.slice(idx + q.length, end) + (end < src.length ? "…" : "");
+    return (
+      escapeHtml(pre) +
+      '<mark class="cs-hit" style="background:#e3f2fd; color:#1e293b; border-radius:3px; padding:0 2px;">' +
+      escapeHtml(hit) +
+      "</mark>" +
+      escapeHtml(post)
+    );
+  }
+
   function messageToPrintHtml(chat) {
     const who = chat.role === "user" ? "You" : "AI";
     const when = chat.date ? new Date(chat.date).toLocaleString() : "";
@@ -1370,258 +1396,408 @@ if (isCollapsed) {
       if (threadsContainer) threadsContainer.style.maxHeight = "none";
     }
 
-    // Render threads with animation
+    // Round 2 — thread panel: search, date grouping, discoverable actions,
+    // inline rename, richer cards. (threadSearchQuery / pendingScroll are
+    // declared at module scope so the snippet helper can read the query.)
+    function ensureThreadKeyframes() {
+      if (document.getElementById("cs-thread-keyframes")) return;
+      const style = document.createElement("style");
+      style.id = "cs-thread-keyframes";
+      style.textContent =
+        "@keyframes slideIn{from{opacity:0;transform:translateX(-20px);}to{opacity:1;transform:translateX(0);}}" +
+        "@keyframes slideInMessage{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}";
+      document.head.appendChild(style);
+    }
+
+    function fmtDate(ts) {
+      if (!ts) return "—";
+      return new Date(ts).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    // Date bucket label from a last-activity timestamp.
+    function bucketFor(ts) {
+      const now = new Date();
+      const startOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      ).getTime();
+      const day = 86400000;
+      if (ts >= startOfToday) return "Today";
+      if (ts >= startOfToday - day) return "Yesterday";
+      if (ts >= startOfToday - 7 * day) return "Previous 7 days";
+      if (ts >= startOfToday - 30 * day) return "Previous 30 days";
+      return new Date(ts).toLocaleDateString("en-GB", {
+        month: "long",
+        year: "numeric",
+      });
+    }
+    const BUCKET_ORDER = [
+      "Today",
+      "Yesterday",
+      "Previous 7 days",
+      "Previous 30 days",
+    ];
+
+    // A discoverable icon action button (hover background + tooltip, 28px target).
+    function makeThreadAction(iconHtml, title, kind) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = title;
+      btn.setAttribute("aria-label", title);
+      btn.className = "cs-thread-action cs-thread-action--" + kind;
+      btn.innerHTML = iconHtml;
+      btn.style.cssText =
+        "display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; background:transparent; border:none; border-radius:6px; cursor:pointer; color:#64748b; transition:background 0.15s ease, color 0.15s ease; flex:0 0 auto;";
+      const hoverColor = kind === "delete" ? "#dc2626" : "#2563eb";
+      btn.addEventListener("mouseenter", () => {
+        btn.style.background = "#e2e8f0";
+        btn.style.color = hoverColor;
+      });
+      btn.addEventListener("mouseleave", () => {
+        btn.style.background = "transparent";
+        btn.style.color = "#64748b";
+      });
+      return btn;
+    }
+
+    const ICON_CLONE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>`;
+    const ICON_RENAME = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`;
+    const ICON_DELETE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+
+    // Inline rename: swap the title for an input (Enter/blur save, Esc cancel).
+    function startInlineRename(thread, nameEl) {
+      if (
+        nameEl.parentNode &&
+        nameEl.parentNode.querySelector(".cs-rename-input")
+      )
+        return;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "cs-rename-input cs-search-input";
+      input.value = thread.name;
+      input.style.cssText =
+        "width:100%; box-sizing:border-box; padding:4px 8px; font-size:0.9rem; font-weight:500; border:1px solid #2563eb; border-radius:6px; outline:none; color:#1e293b; background:#ffffff;";
+      const prevDisplay = nameEl.style.display;
+      nameEl.style.display = "none";
+      nameEl.parentNode.insertBefore(input, nameEl);
+      input.focus();
+      input.select();
+      let done = false;
+      function finish(save) {
+        if (done) return;
+        done = true;
+        const val = input.value.trim();
+        input.remove();
+        nameEl.style.display = prevDisplay || "";
+        if (save && val && val !== thread.name) {
+          chrome.storage.local.get({ threads: [] }, (data) => {
+            const updated = data.threads.map((t) =>
+              t.id === thread.id ? { ...t, name: val } : t,
+            );
+            chrome.storage.local.set({ threads: updated }, () =>
+              renderThreads(false),
+            );
+          });
+        }
+      }
+      input.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          finish(true);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          finish(false);
+        }
+      });
+      input.addEventListener("blur", () => finish(true));
+      input.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    // Build one thread card. `snippet` (optional) is {text, matchText} for search.
+    function createThreadItem(thread, chats, lastTs, count, animate, index, snippet) {
+      const isActive = thread.isActive === "yes";
+      const li = document.createElement("li");
+      li.className = "cs-thread" + (isActive ? " cs-thread--active" : "");
+      li.style.padding = "10px 12px";
+      li.style.cursor = "pointer";
+      li.style.backgroundColor = isActive ? "#e3f2fd" : "transparent";
+      li.style.borderBottom = "1px solid #e5e7eb";
+      li.style.borderRadius = "8px";
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.gap = "8px";
+      li.style.transition = "background 0.2s ease";
+      if (animate) {
+        li.style.opacity = "0";
+        li.style.transform = "translateX(-20px)";
+        li.style.animation = `slideIn 0.3s ease forwards ${index * 0.05}s`;
+      }
+
+      const info = document.createElement("div");
+      info.style.flex = "1";
+      info.style.minWidth = "0";
+      info.style.overflow = "hidden";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "cs-thread-name";
+      nameSpan.textContent = thread.name;
+      nameSpan.style.cssText =
+        "display:block; font-weight:500; font-size:0.95rem; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+
+      const meta = document.createElement("div");
+      meta.className = "cs-thread-meta";
+      meta.style.cssText = "font-size:0.72rem; color:#64748b; margin-top:3px;";
+      meta.textContent = `Created ${fmtDate(thread.created)} · Updated ${fmtDate(
+        lastTs,
+      )} · ${count} msg`;
+
+      info.appendChild(nameSpan);
+      info.appendChild(meta);
+
+      if (snippet && snippet.text) {
+        const snip = document.createElement("div");
+        snip.className = "cs-thread-snippet";
+        snip.style.cssText =
+          "font-size:0.75rem; color:#64748b; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+        snip.innerHTML = highlightSnippet(snippet.text, snippet.matchText);
+        info.appendChild(snip);
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "cs-thread-actions";
+      actions.style.cssText =
+        "display:flex; align-items:center; gap:2px; opacity:0.55; transition:opacity 0.15s ease; flex:0 0 auto;";
+
+      const cloneBtn = makeThreadAction(
+        ICON_CLONE,
+        "Continue in new chat",
+        "clone",
+      );
+      const renameBtn = makeThreadAction(ICON_RENAME, "Rename", "rename");
+      const deleteBtn = makeThreadAction(ICON_DELETE, "Delete", "delete");
+
+      cloneBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        chrome.storage.local.get({ threads: [], chats: [] }, function (data) {
+          const sourceThread = data.threads.find((t) => t.id === thread.id);
+          if (!sourceThread) return;
+          const newId = "thread_" + Date.now();
+          const clonedChats = data.chats
+            .filter((c) => c.threadId === thread.id)
+            .map((c) => ({ ...JSON.parse(JSON.stringify(c)), threadId: newId }));
+          const newThread = {
+            id: newId,
+            name: `${sourceThread.name} (copy)`,
+            created: Date.now(),
+            isActive: "yes",
+            messages: [],
+            clonedFrom: sourceThread.id,
+            clonedFromName: sourceThread.name,
+          };
+          const updatedThreads = data.threads
+            .map((t) => ({ ...t, isActive: "no" }))
+            .concat(newThread);
+          const updatedChats = data.chats.concat(clonedChats);
+          chrome.storage.local.set(
+            { threads: updatedThreads, chats: updatedChats },
+            () => {
+              renderThreads(true);
+              renderChatMessages(newId, true);
+            },
+          );
+        });
+      });
+
+      renameBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        startInlineRename(thread, nameSpan);
+      });
+
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!confirm(`Are you sure you want to delete "${thread.name}"?`)) return;
+        chrome.storage.local.get({ threads: [], chats: [] }, function (data) {
+          let updatedThreads = data.threads.filter((t) => t.id !== thread.id);
+          const updatedChats = data.chats.filter(
+            (chat) => chat.threadId !== thread.id,
+          );
+          updatedThreads = updatedThreads.sort((a, b) => b.created - a.created);
+          if (updatedThreads.length > 0) {
+            updatedThreads = updatedThreads.map((t, i) => ({
+              ...t,
+              isActive: i === 0 ? "yes" : "no",
+            }));
+          }
+          chrome.storage.local.set(
+            { threads: updatedThreads, chats: updatedChats },
+            () => {
+              renderThreads(true);
+              const newActive = updatedThreads.find(
+                (t) => t.isActive === "yes",
+              );
+              renderChatMessages(newActive ? newActive.id : "", true);
+            },
+          );
+        });
+      });
+
+      actions.appendChild(cloneBtn);
+      actions.appendChild(renameBtn);
+      actions.appendChild(deleteBtn);
+
+      li.addEventListener("mouseenter", () => {
+        actions.style.opacity = "1";
+        li.style.backgroundColor = isActive ? "#bfdbfe" : "#f1f5f9";
+      });
+      li.addEventListener("mouseleave", () => {
+        actions.style.opacity = "0.55";
+        li.style.backgroundColor = isActive ? "#e3f2fd" : "transparent";
+      });
+
+      li.addEventListener("click", () => {
+        if (snippet && snippet.matchText) {
+          pendingScroll = { threadId: thread.id, matchText: snippet.matchText };
+        }
+        chrome.storage.local.get({ threads: [] }, (data) => {
+          const updated = data.threads.map((t) => ({
+            ...t,
+            isActive: t.id === thread.id ? "yes" : "no",
+          }));
+          chrome.storage.local.set({ threads: updated }, () => {
+            renderThreads(false);
+            renderChatMessages(thread.id, true);
+          });
+        });
+      });
+
+      li.appendChild(info);
+      li.appendChild(actions);
+      return li;
+    }
+
+    // Render threads: filter by search, group by last-activity date bucket.
     function renderThreads(animate = true) {
       chrome.storage.local.get({ threads: [], chats: [] }, function (result) {
         let threads = result.threads;
         const chats = result.chats;
 
-        threads = threads.sort((a, b) => b.created - a.created);
-
         const hasActiveThread = threads.some((t) => t.isActive === "yes");
         if (!hasActiveThread && threads.length > 0) {
-          threads = threads.map((t, index) => ({
+          const newest = [...threads].sort((a, b) => b.created - a.created)[0];
+          threads = threads.map((t) => ({
             ...t,
-            isActive: index === 0 ? "yes" : "no",
+            isActive: t.id === newest.id ? "yes" : "no",
           }));
-          chrome.storage.local.set({ threads: threads }, () => {
-            console.log("Set newest thread as active:", threads[0]);
+          chrome.storage.local.set({ threads: threads });
+        }
+
+        // Per-thread last activity + message count.
+        const lastActivity = {};
+        const msgCount = {};
+        threads.forEach((t) => {
+          const msgs = chats.filter((c) => c.threadId === t.id);
+          msgCount[t.id] = msgs.length;
+          lastActivity[t.id] = msgs.reduce((m, c) => {
+            const x = new Date(c.date).getTime();
+            return isNaN(x) ? m : Math.max(m, x);
+          }, t.created || 0);
+        });
+
+        // Search filter (name + message full-text), with a match snippet.
+        const q = threadSearchQuery.trim().toLowerCase();
+        const snippets = {};
+        let ordered = threads.slice();
+        if (q) {
+          ordered = ordered.filter((t) => {
+            if ((t.name || "").toLowerCase().includes(q)) {
+              snippets[t.id] = null; // name match, no snippet needed
+              return true;
+            }
+            const hit = chats.find(
+              (c) =>
+                c.threadId === t.id &&
+                (c.text || "").toLowerCase().includes(q),
+            );
+            if (hit) {
+              snippets[t.id] = { text: hit.text, matchText: hit.text };
+              return true;
+            }
+            return false;
           });
         }
+
+        ordered.sort(
+          (a, b) => (lastActivity[b.id] || 0) - (lastActivity[a.id] || 0),
+        );
 
         const threadsList = document.getElementById("threads");
         threadsList.innerHTML = "";
 
-        threads.forEach((thread, index) => {
-          const li = document.createElement("li");
-          li.style.padding = "12px";
-          li.style.cursor = "pointer";
-          li.style.backgroundColor =
-            thread.isActive === "yes" ? "#e3f2fd" : "transparent";
-          li.style.borderBottom = "1px solid #e5e7eb";
-          li.style.display = "flex";
-          li.style.alignItems = "center";
-          li.style.gap = "8px";
-          li.style.transition = "background 0.2s ease";
-          if (animate) {
-            li.style.opacity = "0";
-            li.style.transform = "translateX(-20px)";
-            li.style.animation = `slideIn 0.3s ease forwards ${index * 0.1}s`;
+        if (ordered.length === 0) {
+          const empty = document.createElement("li");
+          empty.style.cssText =
+            "list-style:none; padding:16px 8px; text-align:center; color:#64748b; font-size:0.85rem;";
+          empty.textContent = q
+            ? "No chats match your search."
+            : "No chats yet.";
+          threadsList.appendChild(empty);
+          ensureThreadKeyframes();
+          adjustThreadsContainerHeight();
+          return;
+        }
+
+        // Group into date buckets by last activity.
+        const groups = {};
+        const groupOrder = [];
+        ordered.forEach((t) => {
+          const label = bucketFor(lastActivity[t.id] || 0);
+          if (!groups[label]) {
+            groups[label] = [];
+            groupOrder.push(label);
           }
-
-          const threadInfoContainer = document.createElement("div");
-          threadInfoContainer.style.flex = "1";
-          threadInfoContainer.style.overflow = "hidden";
-          threadInfoContainer.style.textOverflow = "ellipsis";
-          threadInfoContainer.style.whiteSpace = "normal";
-
-          const threadNameSpan = document.createElement("span");
-          threadNameSpan.textContent = thread.name;
-          threadNameSpan.style.fontWeight = "500";
-          threadNameSpan.style.fontSize = "0.95rem";
-          threadNameSpan.style.color = "#1e293b";
-
-          const threadDetails = document.createElement("div");
-          threadDetails.style.fontSize = "0.75rem";
-          threadDetails.style.color = "#64748b";
-          threadDetails.style.marginTop = "4px";
-
-          const createdDate = new Date(thread.created).toLocaleDateString(
-            "en-GB",
-            {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            },
-          );
-          const messageCount = chats.filter(
-            (chat) => chat.threadId === thread.id,
-          ).length;
-          threadDetails.textContent = `Created: ${createdDate} | Messages: ${messageCount}`;
-
-          // Issue #7 — clone/fork this conversation into a new thread.
-          const cloneBtn = document.createElement("button");
-          cloneBtn.title = "Continue in new chat";
-          cloneBtn.style.background = "none";
-          cloneBtn.style.border = "none";
-          cloneBtn.style.cursor = "pointer";
-          cloneBtn.style.fontSize = "0.9rem";
-          cloneBtn.style.transition = "color 0.2s ease";
-          cloneBtn.style.display = "flex";
-          cloneBtn.style.alignItems = "center";
-          cloneBtn.style.color = "#64748b";
-          cloneBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>`;
-
-          const editBtn = document.createElement("button");
-          editBtn.textContent = "✏️";
-          editBtn.style.background = "none";
-          editBtn.style.border = "none";
-          editBtn.style.cursor = "pointer";
-          editBtn.style.fontSize = "0.9rem";
-          editBtn.style.transition = "color 0.2s ease";
-
-          const deleteBtn = document.createElement("button");
-          deleteBtn.textContent = "🗑️";
-          deleteBtn.style.background = "none";
-          deleteBtn.style.border = "none";
-          deleteBtn.style.cursor = "pointer";
-          deleteBtn.style.fontSize = "0.9rem";
-          deleteBtn.style.transition = "color 0.2s ease";
-
-          cloneBtn.addEventListener("mouseenter", () => {
-            cloneBtn.style.color = "#2563eb";
-          });
-          cloneBtn.addEventListener("mouseleave", () => {
-            cloneBtn.style.color = "#64748b";
-          });
-          cloneBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            chrome.storage.local.get(
-              { threads: [], chats: [] },
-              function (data) {
-                const sourceThread = data.threads.find(
-                  (t) => t.id === thread.id,
-                );
-                if (!sourceThread) return;
-                const newId = "thread_" + Date.now();
-                // Deep-copy every message from the source thread.
-                const clonedChats = data.chats
-                  .filter((c) => c.threadId === thread.id)
-                  .map((c) => ({
-                    ...JSON.parse(JSON.stringify(c)),
-                    threadId: newId,
-                  }));
-                const newThread = {
-                  id: newId,
-                  name: `${sourceThread.name} (copy)`,
-                  created: Date.now(),
-                  isActive: "yes",
-                  messages: [],
-                  clonedFrom: sourceThread.id,
-                  clonedFromName: sourceThread.name,
-                };
-                const updatedThreads = data.threads
-                  .map((t) => ({ ...t, isActive: "no" }))
-                  .concat(newThread);
-                const updatedChats = data.chats.concat(clonedChats);
-                chrome.storage.local.set(
-                  { threads: updatedThreads, chats: updatedChats },
-                  () => {
-                    renderThreads(true);
-                    renderChatMessages(newId, true);
-                  },
-                );
-              },
-            );
-          });
-
-          editBtn.addEventListener("mouseenter", () => {
-            editBtn.style.color = "#2563eb";
-          });
-          editBtn.addEventListener("mouseleave", () => {
-            editBtn.style.color = "#64748b";
-          });
-          deleteBtn.addEventListener("mouseenter", () => {
-            deleteBtn.style.color = "#dc2626";
-          });
-          deleteBtn.addEventListener("mouseleave", () => {
-            deleteBtn.style.color = "#64748b";
-          });
-
-          li.addEventListener("click", () => {
-            const updatedThreads = threads.map((t) => ({
-              ...t,
-              isActive: t.id === thread.id ? "yes" : "no",
-            }));
-            chrome.storage.local.set({ threads: updatedThreads }, () => {
-              renderThreads(false); // No animation on thread switch
-              renderChatMessages(thread.id, true); // Animate chat messages
-            });
-          });
-
-          editBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const newName = prompt("Enter new thread name:", thread.name);
-            if (newName && newName.trim()) {
-              const updatedThreads = threads.map((t) =>
-                t.id === thread.id ? { ...t, name: newName.trim() } : t,
-              );
-              chrome.storage.local.set({ threads: updatedThreads }, () => {
-                renderThreads(animate);
-              });
-            }
-          });
-
-          deleteBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (confirm(`Are you sure you want to delete "${thread.name}"?`)) {
-              chrome.storage.local.get(
-                { threads: [], chats: [] },
-                function (data) {
-                  let updatedThreads = data.threads.filter(
-                    (t) => t.id !== thread.id,
-                  );
-                  const updatedChats = data.chats.filter(
-                    (chat) => chat.threadId !== thread.id,
-                  );
-                  updatedThreads = updatedThreads.sort(
-                    (a, b) => b.created - a.created,
-                  );
-                  if (updatedThreads.length > 0) {
-                    updatedThreads = updatedThreads.map((t, index) => ({
-                      ...t,
-                      isActive: index === 0 ? "yes" : "no",
-                    }));
-                  }
-                  chrome.storage.local.set(
-                    { threads: updatedThreads, chats: updatedChats },
-                    () => {
-                      renderThreads(animate);
-                      const newActiveThread = updatedThreads.find(
-                        (t) => t.isActive === "yes",
-                      );
-                      renderChatMessages(
-                        newActiveThread ? newActiveThread.id : "",
-                        true,
-                      );
-                    },
-                  );
-                },
-              );
-            }
-          });
-
-          li.addEventListener("mouseenter", () => {
-            li.style.backgroundColor =
-              thread.isActive === "yes" ? "#bfdbfe" : "#f1f5f9";
-          });
-          li.addEventListener("mouseleave", () => {
-            li.style.backgroundColor =
-              thread.isActive === "yes" ? "#e3f2fd" : "transparent";
-          });
-
-          threadInfoContainer.appendChild(threadNameSpan);
-          threadInfoContainer.appendChild(threadDetails);
-          li.appendChild(threadInfoContainer);
-          li.appendChild(cloneBtn);
-          li.appendChild(editBtn);
-          li.appendChild(deleteBtn);
-          threadsList.appendChild(li);
+          groups[label].push(t);
+        });
+        groupOrder.sort((a, b) => {
+          const ia = BUCKET_ORDER.indexOf(a);
+          const ib = BUCKET_ORDER.indexOf(b);
+          if (ia !== -1 || ib !== -1) {
+            return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+          }
+          // both are month-year buckets: newest first
+          const ta = groups[a][0] ? lastActivity[groups[a][0].id] : 0;
+          const tb = groups[b][0] ? lastActivity[groups[b][0].id] : 0;
+          return tb - ta;
         });
 
-        const style = document.createElement("style");
-        style.textContent = `
-          @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-          }
-          @keyframes slideInMessage {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `;
-        document.head.appendChild(style);
+        let idx = 0;
+        groupOrder.forEach((label) => {
+          const header = document.createElement("li");
+          header.className = "cs-group-header";
+          header.style.cssText =
+            "list-style:none; padding:10px 8px 4px; font-size:0.7rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#64748b;";
+          header.textContent = label;
+          threadsList.appendChild(header);
+          groups[label].forEach((thread) => {
+            const li = createThreadItem(
+              thread,
+              chats,
+              lastActivity[thread.id],
+              msgCount[thread.id],
+              animate,
+              idx++,
+              q ? snippets[thread.id] : null,
+            );
+            threadsList.appendChild(li);
+          });
+        });
 
+        ensureThreadKeyframes();
         adjustThreadsContainerHeight();
       });
     }
