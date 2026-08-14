@@ -64,8 +64,28 @@ A **fixed-position overlay with measured, viewport-clamped pixel positioning**:
 - Moves are applied inside a **`requestAnimationFrame`** callback (one paint per
   frame, no layout thrash), and the drag uses **pointer events with
   `setPointerCapture`** so tracking survives fast movement and the cursor leaving the
-  handle. Only the sidebar header is a handle, and drags never start from its control
-  cluster, so collapse/expand/settings keep working.
+  handle. Drags never start from the sidebar header's control cluster, so
+  collapse/expand/settings keep working.
+
+## Two drag handles — works when the side navigation is collapsed
+
+There are **two** drag handles, bound by the same `setupDragging` loop so they
+share one drag/clamp/persist code path:
+
+1. **The sidebar header** (`#sidebar-header`) — the handle in the expanded,
+   threads-visible state.
+2. **A dedicated top strip** (`#cs-drag-handle`) — a grip bar (`⠿` six-dot icon +
+   a "Drag to move" label, `cursor: grab` / `grabbing`) that lives inside
+   `#main-content`. Because `#main-content` is always visible — including in the
+   **collapsed, chat-only view** — this strip gives the panel a discoverable,
+   always-present drag affordance even when the side navigation is collapsed away.
+   Previously the only handle was the sidebar header, so collapsing the panel left
+   nothing to grab; the top strip fixes that.
+
+Both handles feed the same pointer-capture + rAF loop and the same
+measured-viewport clamping, so dragging is identical (smooth, clamped to the real
+viewport edges, position persisted) regardless of which handle you grab or whether
+the side navigation is expanded or collapsed.
 - The final position is **persisted** to `chrome.storage` and **restored** on load
   (with transitions suppressed so it doesn't animate in from the default spot), and a
   **`resize` listener re-clamps** a dragged panel so a smaller viewport can never

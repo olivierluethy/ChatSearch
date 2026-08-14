@@ -240,6 +240,84 @@ function sendGAEvent(eventName, params = {}) {
     document.head.appendChild(style);
   }
 
+  // =========================================================================
+  // Human-readable timestamps (absolute + relative "time ago") — Part 1.
+  // currentLocale is synced from persisted settings (default en-GB).
+  // =========================================================================
+  let currentLocale = "en-GB";
+
+  // Absolute, locale-formatted date+time, e.g. "14.08.2026, 14:32".
+  function formatAbsolute(date) {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    try {
+      return d.toLocaleString(currentLocale, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (_) {
+      return d.toLocaleString();
+    }
+  }
+
+  // Relative "time ago", picking the largest sensible unit (de).
+  function formatRelative(date) {
+    const then = new Date(date).getTime();
+    if (isNaN(then)) return "";
+    const sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (sec < 5) return "just now";
+    if (sec < 60) return `${sec} sec ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return min === 1 ? "1 min ago" : `${min} min ago`;
+    const hrs = Math.floor(min / 60);
+    if (hrs < 24) return hrs === 1 ? "1 hr ago" : `${hrs} hrs ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return days === 1 ? "1 day ago" : `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    if (days < 365) return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
+    const years = Math.floor(days / 365);
+    return years === 1 ? "1 year ago" : `${years} years ago`;
+  }
+
+  // Build the timestamp element: visible "relative · absolute", tooltip =
+  // absolute, and data-cs-ts so the periodic updater can refresh the relative.
+  function buildTimestampEl(date) {
+    const el = document.createElement("div");
+    el.className = "cs-timestamp";
+    el.style.fontSize = "0.75rem";
+    el.style.color = "#64748b";
+    el.style.marginTop = "4px";
+    el.setAttribute("data-cs-ts", date);
+    el.title = formatAbsolute(date);
+    const rel = document.createElement("span");
+    rel.className = "cs-rel";
+    rel.textContent = formatRelative(date);
+    const abs = document.createElement("span");
+    abs.className = "cs-abs";
+    abs.style.opacity = "0.75";
+    abs.textContent = " · " + formatAbsolute(date);
+    el.appendChild(rel);
+    el.appendChild(abs);
+    return el;
+  }
+
+  // Periodically refresh every rendered relative label so they stay current
+  // without a page reload.
+  let relativeTimer = null;
+  function startRelativeTimeUpdater() {
+    if (relativeTimer) return;
+    relativeTimer = setInterval(() => {
+      document.querySelectorAll(".cs-timestamp[data-cs-ts]").forEach((el) => {
+        const ts = el.getAttribute("data-cs-ts");
+        const rel = el.querySelector(".cs-rel");
+        if (rel) rel.textContent = formatRelative(ts);
+      });
+    }, 45000);
+  }
+
   // Render Markdown text into a container: marked -> DOMPurify -> innerHTML,
   // then highlight fenced code and attach per-block copy buttons.
   function renderMarkdownInto(container, text) {
@@ -281,9 +359,17 @@ function sendGAEvent(eventName, params = {}) {
   // Issues #1 / #9 — persisted user settings
   // =========================================================================
   const DEFAULT_SETTINGS = {
+    // When ON (default), running a Google search auto-submits the query to the
+    // AI. When OFF (manual mode), a search only prepares the sidebar/target chat
+    // and never fires an AI request.
+    autoSendSearch: true,
     newChatPerSearch: false,
+    // Id of the chat pinned as the "active" chat. When set (and auto-send is on)
+    // every Google search routes into this chat, overriding newChatPerSearch.
+    pinnedThreadId: null,
     aiAvatarUrl: "",
     theme: "auto", // "light" | "dark" | "auto"
+    locale: "en-GB", // locale for absolute date/time + grouping formatting
   };
 
   // Inject the theme token sheet once: light variables on the root, dark values
@@ -334,9 +420,11 @@ function sendGAEvent(eventName, params = {}) {
       {P} #new-thread-btn:hover { background: var(--cs-primary-hover) !important; }
       {P} #clear-history { background: var(--cs-danger) !important; }
       {P} #clear-history:hover { background: var(--cs-danger-hover) !important; }
-      {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn, {P} #export-chat-btn { background: var(--cs-neutral) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
-      {P} #report-bug-btn:hover, {P} #get-help-btn:hover, {P} #privacy-policy-btn:hover, {P} #feature-request-btn:hover, {P} #export-chat-btn:hover { background: var(--cs-neutral-hover) !important; }
+      {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn, {P} #export-chat-btn, {P} #cs-save-size-btn, {P} #cs-size-toggle-btn, {P} #cs-clear-input { background: var(--cs-neutral) !important; color: var(--cs-text) !important; border-color: var(--cs-border-strong) !important; }
+      {P} #report-bug-btn:hover, {P} #get-help-btn:hover, {P} #privacy-policy-btn:hover, {P} #feature-request-btn:hover, {P} #export-chat-btn:hover, {P} #cs-save-size-btn:hover, {P} #cs-size-toggle-btn:hover, {P} #cs-clear-input:hover { background: var(--cs-neutral-hover) !important; }
       {P} #report-bug-btn svg, {P} #get-help-btn svg, {P} #privacy-policy-btn svg, {P} #feature-request-btn svg, {P} #export-chat-btn svg { stroke: currentColor !important; }
+      {P} #cs-input-stats { color: var(--cs-text-muted) !important; }
+      {P} .cs-variant-nav { color: var(--cs-text-muted) !important; }
       {P} #new-thread-btn, {P} #clear-history, {P} #report-bug-btn, {P} #get-help-btn, {P} #privacy-policy-btn, {P} #feature-request-btn { flex: 1 1 0 !important; min-width: 0 !important; box-sizing: border-box !important; padding: 10px !important; font-size: 0.9rem !important; }
       {P} #new-thread-btn:active, {P} #clear-history:active, {P} #report-bug-btn:active, {P} #get-help-btn:active, {P} #privacy-policy-btn:active, {P} #feature-request-btn:active { transform: translateY(1px); }
       {P} #new-thread-btn:focus-visible, {P} #clear-history:focus-visible, {P} #report-bug-btn:focus-visible, {P} #get-help-btn:focus-visible, {P} #privacy-policy-btn:focus-visible, {P} #feature-request-btn:focus-visible { outline: 2px solid var(--cs-primary) !important; outline-offset: 2px; }
@@ -552,11 +640,48 @@ function sendGAEvent(eventName, params = {}) {
     };
   }
 
+  // =========================================================================
+  // Part 2 — Full View ⇄ saved-preset panel sizing.
+  // =========================================================================
+  // The "Full View" size: large, but never larger than the viewport.
+  function fullViewSize() {
+    return {
+      width: Math.min(1200, Math.round(window.innerWidth * 0.95)),
+      height: Math.min(900, Math.round(window.innerHeight * 0.9)),
+    };
+  }
+
+  // Apply an explicit width/height (clamped to viewport + widget minimums) and
+  // re-clamp the position so a size change can't strand the panel off-screen.
+  function applyWidgetSize(container, size) {
+    if (!size || typeof size.width !== "number") return;
+    const w = Math.max(WIDGET_MIN_W, Math.min(window.innerWidth, size.width));
+    const h = Math.max(WIDGET_MIN_H, Math.min(window.innerHeight, size.height));
+    container.style.maxWidth = "none";
+    container.style.maxHeight = "none";
+    container.style.width = w + "px";
+    container.style.height = h + "px";
+    if (container.style.transform === "none") {
+      const left = parseFloat(container.style.left) || 0;
+      const top = parseFloat(container.style.top) || 0;
+      const pos = clampToViewport(container, left, top);
+      container.style.left = pos.left + "px";
+      container.style.top = pos.top + "px";
+    }
+  }
+
   function setupDragging(container) {
-    const handle = document.getElementById("sidebar-header");
-    if (!handle) return;
+    // Two independent handles so the panel can be dragged in BOTH the expanded
+    // (sidebar header) and collapsed (dedicated top strip in #main-content)
+    // states. The strip lives in #main-content, which is always visible, so a
+    // drag affordance exists even when the side navigation is collapsed away.
+    const handles = ["sidebar-header", "cs-drag-handle"]
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    if (!handles.length) return;
 
     let dragging = false;
+    let activeHandle = null;
     let startX = 0;
     let startY = 0;
     let startLeft = 0;
@@ -572,7 +697,7 @@ function sendGAEvent(eventName, params = {}) {
       container.style.top = pos.top + "px";
     }
 
-    handle.addEventListener("pointerdown", (e) => {
+    function onPointerDown(handle, e) {
       // Never start a drag from the header controls (settings / collapse).
       if (e.target.closest("#sidebar-header-controls")) return;
       if (e.button !== 0) return;
@@ -585,6 +710,7 @@ function sendGAEvent(eventName, params = {}) {
       container.style.transition = "none"; // no lag while dragging
 
       dragging = true;
+      activeHandle = handle;
       startX = e.clientX;
       startY = e.clientY;
       startLeft = rect.left;
@@ -596,22 +722,23 @@ function sendGAEvent(eventName, params = {}) {
         handle.setPointerCapture(e.pointerId);
       } catch (_) {}
       e.preventDefault();
-    });
+    }
 
-    handle.addEventListener("pointermove", (e) => {
+    function onPointerMove(e) {
       if (!dragging) return;
       pendingLeft = startLeft + (e.clientX - startX);
       pendingTop = startTop + (e.clientY - startY);
       if (rafId == null) rafId = requestAnimationFrame(applyPending);
-    });
+    }
 
     function endDrag(e) {
       if (!dragging) return;
       dragging = false;
-      handle.style.cursor = "grab";
+      if (activeHandle) activeHandle.style.cursor = "grab";
       try {
-        handle.releasePointerCapture(e.pointerId);
+        if (activeHandle) activeHandle.releasePointerCapture(e.pointerId);
       } catch (_) {}
+      activeHandle = null;
       if (rafId != null) {
         cancelAnimationFrame(rafId);
         applyPending();
@@ -621,8 +748,12 @@ function sendGAEvent(eventName, params = {}) {
       chrome.storage.local.set({ panelPosition: pos });
     }
 
-    handle.addEventListener("pointerup", endDrag);
-    handle.addEventListener("pointercancel", endDrag);
+    handles.forEach((handle) => {
+      handle.addEventListener("pointerdown", (e) => onPointerDown(handle, e));
+      handle.addEventListener("pointermove", onPointerMove);
+      handle.addEventListener("pointerup", endDrag);
+      handle.addEventListener("pointercancel", endDrag);
+    });
 
     // Issue #1 — never leave the panel stranded off-screen after a viewport resize.
     window.addEventListener("resize", () => {
@@ -793,32 +924,42 @@ function sendGAEvent(eventName, params = {}) {
         cancelAnimationFrame(cRaf);
         applyWH();
       }
+      // A manual corner-resize becomes the new custom size; drop the saved
+      // view-state (Part 2) so it isn't snapped back to a stale preset on reload.
       chrome.storage.local.set({
         widgetSize: { width: cPendingW, height: cPendingH },
+        panelViewState: null,
       });
     }
     corner.addEventListener("pointerup", endCorner);
     corner.addEventListener("pointercancel", endCorner);
 
     // --- Restore persisted sizes ---
+    // Part 2 — the saved view-state wins: "preset" applies the saved compact
+    // size, "full" applies Full View. Falls back to the last custom drag-resize
+    // size for users who never used the size toggle (panelViewState null).
     chrome.storage.local.get(
-      { sidebarWidth: null, widgetSize: null },
+      {
+        sidebarWidth: null,
+        widgetSize: null,
+        panelPreset: null,
+        panelViewState: null,
+      },
       (r) => {
         if (typeof r.sidebarWidth === "number") {
           sidebar.style.width =
             Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, r.sidebarWidth)) + "px";
         }
-        if (r.widgetSize && typeof r.widgetSize.width === "number") {
-          container.style.maxWidth = "none";
-          container.style.maxHeight = "none";
-          container.style.width =
-            Math.max(WIDGET_MIN_W, Math.min(window.innerWidth, r.widgetSize.width)) +
-            "px";
-          container.style.height =
-            Math.max(
-              WIDGET_MIN_H,
-              Math.min(window.innerHeight, r.widgetSize.height),
-            ) + "px";
+        if (
+          r.panelViewState === "preset" &&
+          r.panelPreset &&
+          typeof r.panelPreset.width === "number"
+        ) {
+          applyWidgetSize(container, r.panelPreset);
+        } else if (r.panelViewState === "full") {
+          applyWidgetSize(container, fullViewSize());
+        } else if (r.widgetSize && typeof r.widgetSize.width === "number") {
+          applyWidgetSize(container, r.widgetSize);
         }
       },
     );
@@ -1068,7 +1209,7 @@ function sendGAEvent(eventName, params = {}) {
     display: flex;
     align-items: center;
     justify-content: center;
-  " title="Navigation ein-/ausklappen">
+  " title="Toggle navigation">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="12" x2="21" y2="12"></line>
       <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -1248,6 +1389,24 @@ function sendGAEvent(eventName, params = {}) {
           flex-direction: column;
           gap: 16px;
         ">
+          <div id="cs-drag-handle" title="Drag to move" role="toolbar" aria-label="Drag to move the panel" style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: -24px -24px 0;
+            padding: 8px 16px;
+            cursor: grab;
+            user-select: none;
+            color: var(--cs-text-muted, #94a3b8);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            border-bottom: 1px solid var(--cs-border, #e2e8f0);
+          ">
+            <span aria-hidden="true" style="font-size: 1.05rem; line-height: 1; letter-spacing: 1px;">&#10303;</span>
+            <span>Drag to move</span>
+          </div>
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
             <h2 style="
               margin: 0;
@@ -1255,28 +1414,57 @@ function sendGAEvent(eventName, params = {}) {
               font-weight: 600;
               color: #1e293b;
             ">Talk to AI</h2>
-            <button id="export-chat-btn" title="Export this chat as PDF" style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              padding: 8px 12px;
-              background: #e5e7eb;
-              color: #1e293b;
-              border: 1px solid #d1d5db;
-              border-radius: 8px;
-              cursor: pointer;
-              font-size: 0.85rem;
-              font-weight: 500;
-              white-space: nowrap;
-              transition: background 0.2s ease;
-            ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              Export PDF
-            </button>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 0 0 auto;">
+              <button id="cs-save-size-btn" title="Save current size" aria-label="Save current size" style="
+                display: flex; align-items: center; justify-content: center;
+                width: 34px; height: 34px; padding: 0;
+                background: #e5e7eb; color: #1e293b;
+                border: 1px solid #d1d5db; border-radius: 8px;
+                cursor: pointer; transition: background 0.2s ease;
+              ">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+              </button>
+              <button id="cs-size-toggle-btn" title="Compact view" aria-label="Toggle full view" style="
+                display: flex; align-items: center; justify-content: center;
+                width: 34px; height: 34px; padding: 0;
+                background: #e5e7eb; color: #1e293b;
+                border: 1px solid #d1d5db; border-radius: 8px;
+                cursor: pointer; transition: background 0.2s ease;
+              ">
+                <svg id="cs-size-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="4 14 10 14 10 20"></polyline>
+                  <polyline points="20 10 14 10 14 4"></polyline>
+                  <line x1="14" y1="10" x2="21" y2="3"></line>
+                  <line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+              </button>
+              <button id="export-chat-btn" title="Export this chat as PDF" style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 12px;
+                background: #e5e7eb;
+                color: #1e293b;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                font-weight: 500;
+                white-space: nowrap;
+                transition: background 0.2s ease;
+              ">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export PDF
+              </button>
+            </div>
           </div>
 
           <div id="chat-display" style="
@@ -1294,34 +1482,71 @@ function sendGAEvent(eventName, params = {}) {
             scrollbar-color: #94a3b8 #e2e8f0;
           "></div>
 
-          <div style="
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          ">
-            <input id="custom-ai-input" value="${googleSearchInput ? googleSearchInput.value : ""}" 
-              type="text" placeholder="Type your message here..." style="
-              flex: 1;
-              padding: 12px 16px;
-              font-size: 1rem;
-              border: 1px solid #d1d5db;
-              border-radius: 8px;
-              box-sizing: border-box;
-              outline: none;
-              transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            " />
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: flex-end; gap: 8px;">
+              <div style="position: relative; flex: 1; display: flex;">
+                <textarea id="custom-ai-input" rows="1" placeholder="Type your message here…  (Enter = send, Shift+Enter = new line)" style="
+                  flex: 1;
+                  padding: 12px 40px 12px 16px;
+                  font-size: 1rem;
+                  line-height: 1.5;
+                  border: 1px solid #d1d5db;
+                  border-radius: 8px;
+                  box-sizing: border-box;
+                  outline: none;
+                  resize: none;
+                  max-height: 160px;
+                  overflow-y: auto;
+                  font-family: inherit;
+                  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                "></textarea>
+                <button id="cs-clear-input" type="button" title="Clear" aria-label="Clear input" style="
+                  position: absolute;
+                  right: 8px;
+                  top: 8px;
+                  display: none;
+                  width: 22px;
+                  height: 22px;
+                  padding: 0;
+                  align-items: center;
+                  justify-content: center;
+                  background: #e5e7eb;
+                  color: #64748b;
+                  border: none;
+                  border-radius: 50%;
+                  cursor: pointer;
+                  font-size: 0.9rem;
+                  line-height: 1;
+                  transition: background 0.2s ease, color 0.2s ease;
+                ">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="6" y1="18" x2="18" y2="6"></line></svg>
+                </button>
+              </div>
 
-            <button id="sendToApiBtn" style="
-              padding: 12px 20px;
-              background-color: #25D366;
-              color: white;
-              border: none;
-              border-radius: 8px;
-              cursor: pointer;
-              font-size: 1rem;
-              transition: background 0.2s;
-              white-space: nowrap;
-            ">Send</button>
+              <button id="sendToApiBtn" title="Send" aria-label="Send" style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                flex: 0 0 auto;
+                padding: 0;
+                background-color: #25D366;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.2s;
+              ">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </div>
+            <div id="cs-input-stats" style="
+              font-size: 0.72rem;
+              color: #64748b;
+              padding: 0 2px;
+              user-select: none;
+            ">0 words · 0 sentences · 0 characters</div>
           </div>
         </div>
       </div>
@@ -1360,7 +1585,7 @@ if (isCollapsed) {
   bottomButtons.style.display = "none";
   threadsTitle.style.display = "none";
 
-  toggleBtn.title = "Navigation ausklappen";
+  toggleBtn.title = "Expand navigation";
   toggleBtn.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="6" x2="12" y2="6"></line>
@@ -1390,7 +1615,7 @@ if (isCollapsed) {
   bottomButtons.style.display = "flex";
   threadsTitle.style.display = "block";
 
-  toggleBtn.title = "Navigation einklappen";
+  toggleBtn.title = "Collapse navigation";
   toggleBtn.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1450,14 +1675,15 @@ if (isCollapsed) {
 
     function fmtDate(ts) {
       if (!ts) return "—";
-      return new Date(ts).toLocaleDateString("en-GB", {
+      return new Date(ts).toLocaleDateString(currentLocale, {
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
       });
     }
 
-    // Date bucket label from a last-activity timestamp.
+    // Date bucket label from a last-activity timestamp (Part 1 — German,
+    // day-based: Today / Yesterday / Day before yesterday, then the date).
     function bucketFor(ts) {
       const now = new Date();
       const startOfToday = new Date(
@@ -1468,19 +1694,21 @@ if (isCollapsed) {
       const day = 86400000;
       if (ts >= startOfToday) return "Today";
       if (ts >= startOfToday - day) return "Yesterday";
-      if (ts >= startOfToday - 7 * day) return "Previous 7 days";
-      if (ts >= startOfToday - 30 * day) return "Previous 30 days";
-      return new Date(ts).toLocaleDateString("en-GB", {
-        month: "long",
+      if (ts >= startOfToday - 2 * day) return "Day before yesterday";
+      const d = new Date(ts);
+      const dateStr = d.toLocaleDateString(currentLocale, {
+        day: "2-digit",
+        month: "2-digit",
         year: "numeric",
       });
+      // Within the last week, prefix the weekday, e.g. "Montag, 11.08.2026".
+      if (ts >= startOfToday - 6 * day) {
+        const weekday = d.toLocaleDateString(currentLocale, { weekday: "long" });
+        return `${weekday}, ${dateStr}`;
+      }
+      return dateStr;
     }
-    const BUCKET_ORDER = [
-      "Today",
-      "Yesterday",
-      "Previous 7 days",
-      "Previous 30 days",
-    ];
+    const BUCKET_ORDER = ["Today", "Yesterday", "Day before yesterday"];
 
     // A discoverable icon action button (hover background + tooltip, 28px target).
     function makeThreadAction(iconHtml, title, kind) {
@@ -1507,6 +1735,8 @@ if (isCollapsed) {
     const ICON_CLONE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>`;
     const ICON_RENAME = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>`;
     const ICON_DELETE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+    const ICON_PIN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14l-1.6-3.5V6a2 2 0 0 0-2-2h-6.8a2 2 0 0 0-2 2v7.5L5 17z"></path></svg>`;
+    const ICON_PINNED = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14l-1.6-3.5V6a2 2 0 0 0-2-2h-6.8a2 2 0 0 0-2 2v7.5L5 17z"></path></svg>`;
 
     // Inline rename: swap the title for an input (Enter/blur save, Esc cancel).
     function startInlineRename(thread, nameEl) {
@@ -1559,15 +1789,24 @@ if (isCollapsed) {
     }
 
     // Build one thread card. `snippet` (optional) is {text, matchText} for search.
-    function createThreadItem(thread, chats, lastTs, count, animate, index, snippet) {
+    function createThreadItem(thread, chats, lastTs, count, animate, index, snippet, pinnedId) {
       const isActive = thread.isActive === "yes";
+      const isPinned = pinnedId != null && thread.id === pinnedId;
       const li = document.createElement("li");
-      li.className = "cs-thread" + (isActive ? " cs-thread--active" : "");
+      li.className =
+        "cs-thread" +
+        (isActive ? " cs-thread--active" : "") +
+        (isPinned ? " cs-thread--pinned" : "");
       li.style.padding = "10px 12px";
       li.style.cursor = "pointer";
       li.style.backgroundColor = isActive ? "#e3f2fd" : "transparent";
       li.style.borderBottom = "1px solid #e5e7eb";
       li.style.borderRadius = "8px";
+      // A pinned chat gets a clear left accent bar so it's obvious which chat
+      // every Google search is routing into.
+      li.style.boxShadow = isPinned
+        ? "inset 3px 0 0 var(--cs-primary, #2563eb)"
+        : "none";
       li.style.display = "flex";
       li.style.alignItems = "center";
       li.style.gap = "8px";
@@ -1585,9 +1824,23 @@ if (isCollapsed) {
 
       const nameSpan = document.createElement("span");
       nameSpan.className = "cs-thread-name";
-      nameSpan.textContent = thread.name;
       nameSpan.style.cssText =
-        "display:block; font-weight:500; font-size:0.95rem; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+        "display:flex; align-items:center; gap:5px; font-weight:500; font-size:0.95rem; color:#1e293b; overflow:hidden; white-space:nowrap;";
+      if (isPinned) {
+        const pinBadge = document.createElement("span");
+        pinBadge.className = "cs-thread-pin-badge";
+        pinBadge.setAttribute("aria-label", "Pinned as active chat");
+        pinBadge.title = "Pinned as active chat";
+        pinBadge.style.cssText =
+          "flex:0 0 auto; display:inline-flex; color:var(--cs-primary, #2563eb);";
+        pinBadge.innerHTML = ICON_PINNED;
+        nameSpan.appendChild(pinBadge);
+      }
+      const nameText = document.createElement("span");
+      nameText.textContent = thread.name;
+      nameText.style.cssText =
+        "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+      nameSpan.appendChild(nameText);
 
       const meta = document.createElement("div");
       meta.className = "cs-thread-meta";
@@ -1613,6 +1866,14 @@ if (isCollapsed) {
       actions.style.cssText =
         "display:flex; align-items:center; gap:2px; opacity:0.55; transition:opacity 0.15s ease; flex:0 0 auto;";
 
+      const pinBtn = makeThreadAction(
+        isPinned ? ICON_PINNED : ICON_PIN,
+        isPinned
+          ? "Unpin (stop routing searches here)"
+          : "Pin as active chat (route every search here)",
+        "pin",
+      );
+      if (isPinned) pinBtn.style.color = "var(--cs-primary, #2563eb)";
       const cloneBtn = makeThreadAction(
         ICON_CLONE,
         "Continue in new chat",
@@ -1620,6 +1881,28 @@ if (isCollapsed) {
       );
       const renameBtn = makeThreadAction(ICON_RENAME, "Rename", "rename");
       const deleteBtn = makeThreadAction(ICON_DELETE, "Delete", "delete");
+
+      pinBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (isPinned) {
+          // Unpin.
+          saveSettings({ pinnedThreadId: null }).then(() => renderThreads(false));
+          return;
+        }
+        // Pin this chat and make it the current/active one so searches route here.
+        chrome.storage.local.get({ threads: [] }, (data) => {
+          const updated = data.threads.map((t) => ({
+            ...t,
+            isActive: t.id === thread.id ? "yes" : "no",
+          }));
+          chrome.storage.local.set({ threads: updated }, () => {
+            saveSettings({ pinnedThreadId: thread.id }).then(() => {
+              renderThreads(false);
+              renderChatMessages(thread.id, false);
+            });
+          });
+        });
+      });
 
       cloneBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1661,6 +1944,8 @@ if (isCollapsed) {
       deleteBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (!confirm(`Are you sure you want to delete "${thread.name}"?`)) return;
+        // Deleting the pinned chat must clear the pin so searches don't dangle.
+        if (isPinned) saveSettings({ pinnedThreadId: null });
         chrome.storage.local.get({ threads: [], chats: [] }, function (data) {
           let updatedThreads = data.threads.filter((t) => t.id !== thread.id);
           const updatedChats = data.chats.filter(
@@ -1686,6 +1971,7 @@ if (isCollapsed) {
         });
       });
 
+      actions.appendChild(pinBtn);
       actions.appendChild(cloneBtn);
       actions.appendChild(renameBtn);
       actions.appendChild(deleteBtn);
@@ -1722,9 +2008,13 @@ if (isCollapsed) {
 
     // Render threads: filter by search, group by last-activity date bucket.
     function renderThreads(animate = true) {
-      chrome.storage.local.get({ threads: [], chats: [] }, function (result) {
+      chrome.storage.local.get(
+        { threads: [], chats: [], settings: DEFAULT_SETTINGS },
+        function (result) {
         let threads = result.threads;
         const chats = result.chats;
+        const pinnedId = (result.settings || {}).pinnedThreadId || null;
+        currentLocale = (result.settings || {}).locale || "en-GB";
 
         const hasActiveThread = threads.some((t) => t.isActive === "yes");
         if (!hasActiveThread && threads.length > 0) {
@@ -1831,6 +2121,7 @@ if (isCollapsed) {
               animate,
               idx++,
               q ? snippets[thread.id] : null,
+              pinnedId,
             );
             threadsList.appendChild(li);
           });
@@ -1909,6 +2200,9 @@ if (isCollapsed) {
 
     // Input focus state
     const input = document.getElementById("custom-ai-input");
+    // Seed the textarea from the Google search box (set via JS so special
+    // characters can't break the markup).
+    input.value = googleSearchInput ? googleSearchInput.value : "";
     input.addEventListener("focus", () => {
       input.style.borderColor = "#2563eb";
       input.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.2)";
@@ -1917,6 +2211,159 @@ if (isCollapsed) {
       input.style.borderColor = "#d1d5db";
       input.style.boxShadow = "none";
     });
+
+    // Part 3 — input UX: auto-grow, clear (X), and live word/sentence/char stats.
+    const clearInputBtn = document.getElementById("cs-clear-input");
+    const inputStats = document.getElementById("cs-input-stats");
+
+    function autoGrowInput() {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 160) + "px";
+    }
+
+    function computeInputStats(text) {
+      const trimmed = text.trim();
+      const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+      const sentences = trimmed
+        ? trimmed.split(/[.!?…]+/).filter((s) => s.trim().length).length
+        : 0;
+      const chars = text.length;
+      const w = words === 1 ? "1 word" : `${words} words`;
+      const s = sentences === 1 ? "1 sentence" : `${sentences} sentences`;
+      const c = chars === 1 ? "1 character" : `${chars} characters`;
+      return `${w} · ${s} · ${c}`;
+    }
+
+    // Keep every input-dependent affordance in sync (call after any change,
+    // including programmatic clears).
+    function syncInputUi() {
+      const hasText = input.value.length > 0;
+      if (clearInputBtn) clearInputBtn.style.display = hasText ? "flex" : "none";
+      if (inputStats) inputStats.textContent = computeInputStats(input.value);
+      autoGrowInput();
+    }
+
+    input.addEventListener("input", syncInputUi);
+
+    if (clearInputBtn) {
+      clearInputBtn.addEventListener("mouseenter", () => {
+        clearInputBtn.style.background = "#d1d5db";
+        clearInputBtn.style.color = "#1e293b";
+      });
+      clearInputBtn.addEventListener("mouseleave", () => {
+        clearInputBtn.style.background = "#e5e7eb";
+        clearInputBtn.style.color = "#64748b";
+      });
+      clearInputBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        input.value = "";
+        syncInputUi();
+        input.focus();
+      });
+    }
+
+    // Initial sync (the textarea may be seeded from the Google search box).
+    syncInputUi();
+
+    const sendBtnEl = document.getElementById("sendToApiBtn");
+    if (sendBtnEl) {
+      sendBtnEl.addEventListener(
+        "mouseenter",
+        () => (sendBtnEl.style.backgroundColor = "#1eb857"),
+      );
+      sendBtnEl.addEventListener(
+        "mouseleave",
+        () => (sendBtnEl.style.backgroundColor = "#25D366"),
+      );
+    }
+
+    // Part 2 — "Save current size" + Full View ⇄ compact-preset toggle.
+    const saveSizeBtn = document.getElementById("cs-save-size-btn");
+    const sizeToggleBtn = document.getElementById("cs-size-toggle-btn");
+    const sizeToggleIcon = document.getElementById("cs-size-toggle-icon");
+    const ICON_EXPAND =
+      '<polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>';
+    const ICON_COMPACT =
+      '<polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line>';
+
+    // Tooltip/icon describe what the NEXT click will do.
+    function updateSizeToggleUi(state) {
+      if (!sizeToggleBtn) return;
+      const goingCompact = state !== "preset";
+      const tip = goingCompact ? "Compact view" : "Full View";
+      sizeToggleBtn.title = tip;
+      sizeToggleBtn.setAttribute("aria-label", tip);
+      if (sizeToggleIcon)
+        sizeToggleIcon.innerHTML = goingCompact ? ICON_COMPACT : ICON_EXPAND;
+    }
+
+    if (sizeToggleBtn) {
+      chrome.storage.local.get({ panelViewState: "full" }, (r) => {
+        updateSizeToggleUi(r.panelViewState === "preset" ? "preset" : "full");
+      });
+      sizeToggleBtn.addEventListener("mouseenter", () => {
+        sizeToggleBtn.style.background = "#d1d5db";
+      });
+      sizeToggleBtn.addEventListener("mouseleave", () => {
+        sizeToggleBtn.style.background = "#e5e7eb";
+      });
+      sizeToggleBtn.addEventListener("click", () => {
+        chrome.storage.local.get(
+          { panelPreset: null, panelViewState: "full" },
+          (r) => {
+            if (r.panelViewState === "preset") {
+              // Currently compact → snap to Full View.
+              applyWidgetSize(uiContainer, fullViewSize());
+              chrome.storage.local.set({ panelViewState: "full" });
+              updateSizeToggleUi("full");
+            } else {
+              // Currently full → snap to the saved preset (or, if none saved
+              // yet, the current size) and remember that as compact.
+              const rect = uiContainer.getBoundingClientRect();
+              const size =
+                r.panelPreset && typeof r.panelPreset.width === "number"
+                  ? r.panelPreset
+                  : {
+                      width: Math.round(rect.width),
+                      height: Math.round(rect.height),
+                    };
+              applyWidgetSize(uiContainer, size);
+              chrome.storage.local.set({ panelViewState: "preset" });
+              updateSizeToggleUi("preset");
+            }
+          },
+        );
+      });
+    }
+
+    if (saveSizeBtn) {
+      saveSizeBtn.addEventListener("mouseenter", () => {
+        saveSizeBtn.style.background = "#d1d5db";
+      });
+      saveSizeBtn.addEventListener("mouseleave", () => {
+        saveSizeBtn.style.background = "#e5e7eb";
+      });
+      saveSizeBtn.addEventListener("click", () => {
+        const rect = uiContainer.getBoundingClientRect();
+        const preset = {
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+        chrome.storage.local.set(
+          { panelPreset: preset, panelViewState: "preset" },
+          () => {
+            updateSizeToggleUi("preset");
+            // Brief green confirmation flash.
+            saveSizeBtn.style.background = "#22c55e";
+            saveSizeBtn.style.color = "#ffffff";
+            setTimeout(() => {
+              saveSizeBtn.style.background = "#e5e7eb";
+              saveSizeBtn.style.color = "#1e293b";
+            }, 700);
+          },
+        );
+      });
+    }
 
     // Issue #7 — thread search box: filter threads by name + message text.
     const searchInput = document.getElementById("cs-thread-search");
@@ -2090,6 +2537,26 @@ if (isCollapsed) {
         secTitle.textContent = "Google search behaviour";
         secTitle.style.cssText =
           "margin: 0 0 8px; font-size: 1rem; font-weight: 600; color: #1e293b;";
+        section.appendChild(secTitle);
+
+        // --- Auto-send search to AI (master switch) ---
+        const autoDesc = document.createElement("p");
+        autoDesc.style.cssText =
+          "margin: 0 0 12px; font-size: 0.85rem; color: #64748b; line-height: 1.5;";
+        const autoRow = document.createElement("div");
+        autoRow.style.cssText =
+          "display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;";
+        const autoLabel = document.createElement("span");
+        autoLabel.style.cssText = "font-size: 0.9rem; color: #1e293b;";
+        autoLabel.textContent = "Auto-send search to AI";
+        function syncAutoDesc(on) {
+          autoDesc.textContent = on
+            ? "Google searches are submitted to the AI automatically."
+            : "Manual mode: a search only opens the chat — nothing is sent to the AI until you type and submit.";
+        }
+        syncAutoDesc(settings.autoSendSearch);
+
+        // --- Start a new chat for each Google search ---
         const desc = document.createElement("p");
         desc.style.cssText =
           "margin: 0 0 12px; font-size: 0.85rem; color: #64748b; line-height: 1.5;";
@@ -2099,21 +2566,52 @@ if (isCollapsed) {
         const rowLabel = document.createElement("span");
         rowLabel.style.cssText = "font-size: 0.9rem; color: #1e293b;";
         rowLabel.textContent = "Start a new chat for each Google search";
+
+        // The "new chat per search" row only applies when auto-send is on and no
+        // chat is pinned — dim it and pause its toggle otherwise.
+        function syncNewChatEnabled(autoOn) {
+          const dim = !autoOn || !!settings.pinnedThreadId;
+          row.style.opacity = dim ? "0.5" : "1";
+          row.style.pointerEvents = dim ? "none" : "auto";
+        }
         function syncDesc(on) {
-          desc.textContent = on
-            ? "Each Google search opens in a brand-new chat thread."
-            : "Google searches continue in your current chat thread.";
+          desc.textContent = settings.pinnedThreadId
+            ? "A chat is pinned — every search routes into it (this overrides the setting below)."
+            : on
+              ? "Each Google search opens in a brand-new chat thread."
+              : "Google searches continue in your current chat thread.";
         }
         syncDesc(settings.newChatPerSearch);
+        syncNewChatEnabled(settings.autoSendSearch);
+
+        const autoToggle = makeToggle(settings.autoSendSearch, (on) => {
+          settings.autoSendSearch = on;
+          syncAutoDesc(on);
+          syncNewChatEnabled(on);
+          saveSettings({ autoSendSearch: on });
+        });
+        autoRow.appendChild(autoLabel);
+        autoRow.appendChild(autoToggle);
+
         const toggle = makeToggle(settings.newChatPerSearch, (on) => {
           syncDesc(on);
           saveSettings({ newChatPerSearch: on });
         });
         row.appendChild(rowLabel);
         row.appendChild(toggle);
-        section.appendChild(secTitle);
+
+        // --- Pin hint ---
+        const pinHint = document.createElement("p");
+        pinHint.style.cssText =
+          "margin: 12px 0 0; font-size: 0.8rem; color: #64748b; line-height: 1.5;";
+        pinHint.textContent =
+          "Tip: pin a chat from the threads list (the pin icon) to make every search route into it.";
+
+        section.appendChild(autoDesc);
+        section.appendChild(autoRow);
         section.appendChild(desc);
         section.appendChild(row);
+        section.appendChild(pinHint);
         modal.appendChild(section);
 
         // --- AI avatar (#9) ---
@@ -2288,6 +2786,7 @@ if (isCollapsed) {
             };
             chats.push(userMessage);
             customAIInput.value = "";
+            syncInputUi();
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
                 renderChatMessages(activeThread.id, false); // No animation on new message
@@ -2429,6 +2928,8 @@ if (isCollapsed) {
             "Are you sure you want to delete all threads and chats? This action cannot be undone.",
           )
         ) {
+          // Clearing every thread must also drop any pin so it can't dangle.
+          saveSettings({ pinnedThreadId: null });
           chrome.storage.local.set({ threads: [], chats: [] }, function () {
             const newThread = {
               id: "thread_" + Date.now(),
@@ -2455,6 +2956,8 @@ if (isCollapsed) {
           result.settings || {},
         );
         currentAvatarUrl = avatarSettings.aiAvatarUrl || "";
+        currentLocale = avatarSettings.locale || "en-GB";
+        startRelativeTimeUpdater();
         const chatDisplay = document.getElementById("chat-display");
         const wasTyping =
           document.getElementById("typing-notification") !== null;
@@ -2478,6 +2981,23 @@ if (isCollapsed) {
           badge.title = badge.textContent;
           chatDisplay.appendChild(badge);
         }
+
+        // Ensure every message has a stable id (Part 4 — regenerate/variants
+        // locate messages by id). Migrate any legacy id-less messages once.
+        let idsAdded = false;
+        result.chats.forEach((c, i) => {
+          if (!c.id) {
+            c.id =
+              "m_" +
+              (new Date(c.date).getTime() || 0) +
+              "_" +
+              i +
+              "_" +
+              Math.random().toString(36).slice(2, 7);
+            idsAdded = true;
+          }
+        });
+        if (idsAdded) chrome.storage.local.set({ chats: result.chats });
 
         const threadChats = result.chats.filter(
           (chat) => chat.threadId === activeThreadId,
@@ -2512,19 +3032,28 @@ if (isCollapsed) {
           messageBubble.style.lineHeight = "1.5";
           messageBubble.className =
             "cs-bubble cs-bubble--" + (chat.role === "user" ? "user" : "ai");
+
+          // Part 4 — variant model: an AI turn may hold several answers. The
+          // displayed answer is variants[variantIndex]; chat.text is kept in
+          // sync so search/PDF/context (which read .text) stay correct.
+          const isAi = chat.role !== "user";
+          const variants =
+            isAi && Array.isArray(chat.variants) && chat.variants.length
+              ? chat.variants
+              : [chat.text];
+          const variantIndex = isAi
+            ? Math.min(Math.max(0, chat.variantIndex || 0), variants.length - 1)
+            : 0;
+          const displayText = isAi ? variants[variantIndex] : chat.text;
+
           // Issue #10 — render AI Markdown/code; keep user input as plain text.
           if (chat.role === "user") {
             messageBubble.textContent = chat.text;
           } else {
-            renderMarkdownInto(messageBubble, chat.text);
+            renderMarkdownInto(messageBubble, displayText);
           }
 
-          const timestamp = document.createElement("div");
-          timestamp.className = "cs-timestamp";
-          timestamp.style.fontSize = "0.75rem";
-          timestamp.style.color = "#64748b";
-          timestamp.style.marginTop = "4px";
-          timestamp.textContent = new Date(chat.date).toLocaleString();
+          const timestamp = buildTimestampEl(chat.date);
 
           const iconContainer = document.createElement("div");
           iconContainer.style.margin =
@@ -2549,11 +3078,25 @@ if (isCollapsed) {
           // Issues #10 / #8 — per-message actions: copy (AI) + export PDF (all).
           const msgActions = document.createElement("div");
           msgActions.style.cssText =
-            "display: flex; gap: 6px; margin-top: 4px; align-self: " +
+            "display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; align-self: " +
             (chat.role === "user" ? "flex-end" : "flex-start") +
             ";";
-          if (chat.role !== "user") {
-            msgActions.appendChild(makeCopyButton(() => chat.text));
+          if (isAi) {
+            msgActions.appendChild(makeCopyButton(() => displayText));
+            // Variant navigation (‹ n / total ›) when more than one answer.
+            if (variants.length > 1) {
+              msgActions.appendChild(
+                makeVariantNav(chat.id, variantIndex, variants.length),
+              );
+            }
+            // Regenerate: re-run the same preceding user prompt for a new answer.
+            const regenBtn = makeMiniButton(
+              "↻ Regenerate",
+              "Regenerate answer",
+              () => regenerateAiMessage(chat.id),
+            );
+            regenBtn.classList.add("cs-regen-btn");
+            msgActions.appendChild(regenBtn);
           }
           msgActions.appendChild(
             makeMiniButton("PDF", "Export this message as PDF", () =>
@@ -2607,6 +3150,139 @@ if (isCollapsed) {
           chatDisplay.scrollTop = chatDisplay.scrollHeight;
         }
       });
+    }
+
+    // Part 4 — ‹ n / total › variant switcher for an assistant message.
+    function makeVariantNav(chatId, index, total) {
+      const wrap = document.createElement("div");
+      wrap.className = "cs-variant-nav";
+      wrap.style.cssText =
+        "display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--cs-text-muted,#64748b);";
+      const mkArrow = (glyph, title, aria, targetIndex, disabled) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "cs-copy-btn";
+        b.textContent = glyph;
+        b.title = title;
+        b.setAttribute("aria-label", aria);
+        b.style.padding = "2px 7px";
+        b.disabled = disabled;
+        if (disabled) {
+          b.style.opacity = "0.5";
+          b.style.cursor = "default";
+        }
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!disabled) switchVariant(chatId, targetIndex);
+        });
+        return b;
+      };
+      const label = document.createElement("span");
+      label.textContent = `${index + 1} / ${total}`;
+      label.style.cssText = "min-width:30px; text-align:center;";
+      wrap.appendChild(
+        mkArrow("‹", "Previous variant", "Previous variant", index - 1, index <= 0),
+      );
+      wrap.appendChild(label);
+      wrap.appendChild(
+        mkArrow("›", "Next variant", "Next variant", index + 1, index >= total - 1),
+      );
+      return wrap;
+    }
+
+    // Switch the displayed variant of an assistant message and persist.
+    function switchVariant(chatId, newIndex) {
+      chrome.storage.local.get({ chats: [] }, (result) => {
+        const chats = result.chats;
+        const target = chats.find((c) => c.id === chatId);
+        if (!target) return;
+        const variants =
+          Array.isArray(target.variants) && target.variants.length
+            ? target.variants
+            : [target.text];
+        const i = Math.min(Math.max(0, newIndex), variants.length - 1);
+        target.variants = variants;
+        target.variantIndex = i;
+        target.text = variants[i]; // keep .text in sync for search/PDF/context
+        chrome.storage.local.set({ chats: chats }, () =>
+          renderChatMessages(target.threadId, false),
+        );
+      });
+    }
+
+    // Brief, self-dismissing notice inside the chat area (e.g. regen failure).
+    function showTransientNotice(chatDisplay, msg) {
+      const n = document.createElement("div");
+      n.textContent = msg;
+      n.style.cssText =
+        "align-self:center; font-size:0.75rem; color:var(--cs-danger,#dc2626); background:var(--cs-sidebar,#f1f5f9); border:1px solid var(--cs-border,#e2e8f0); border-radius:999px; padding:4px 12px; margin:4px 0; max-width:90%; text-align:center;";
+      chatDisplay.appendChild(n);
+      chatDisplay.scrollTop = chatDisplay.scrollHeight;
+      setTimeout(() => n.remove(), 3200);
+    }
+
+    // Part 4 — regenerate: re-run the same preceding user prompt (same thread
+    // context via sendToApi) and append the answer as a new variant. Existing
+    // variants are untouched on failure.
+    let regenBusy = false;
+    async function regenerateAiMessage(chatId) {
+      if (regenBusy) return;
+      const chatDisplay = document.getElementById("chat-display");
+      const store = await new Promise((res) =>
+        chrome.storage.local.get({ chats: [], threads: [] }, res),
+      );
+      const chats = store.chats;
+      const target = chats.find((c) => c.id === chatId);
+      if (!target || target.role === "user") return;
+      const threadId = target.threadId;
+
+      // Nearest preceding user message in this thread is the prompt to re-run.
+      const threadChats = chats.filter((c) => c.threadId === threadId);
+      const ti = threadChats.indexOf(target);
+      let userText = null;
+      for (let i = ti - 1; i >= 0; i--) {
+        if (threadChats[i].role === "user") {
+          userText = threadChats[i].text;
+          break;
+        }
+      }
+      if (!userText) return;
+
+      regenBusy = true;
+      showTypingNotification(chatDisplay);
+      let aiResponse;
+      try {
+        const [r] = await Promise.all([
+          sendToApi(userText, threadId),
+          new Promise((res) => setTimeout(res, 500)),
+        ]);
+        aiResponse = r;
+      } catch (e) {
+        aiResponse = "Error: " + (e && e.message ? e.message : "unknown");
+      }
+      hideTypingNotification();
+      regenBusy = false;
+
+      // sendToApi returns an "Error: …" string on failure — keep variants intact.
+      if (typeof aiResponse !== "string" || aiResponse.startsWith("Error:")) {
+        showTransientNotice(
+          chatDisplay,
+          "Regeneration failed. Your existing variants are unchanged.",
+        );
+        return;
+      }
+
+      const variants =
+        Array.isArray(target.variants) && target.variants.length
+          ? target.variants.slice()
+          : [target.text];
+      variants.push(aiResponse);
+      target.variants = variants;
+      target.variantIndex = variants.length - 1; // jump to the new answer
+      target.text = aiResponse;
+      chrome.storage.local.set({ chats: chats }, () =>
+        renderChatMessages(threadId, false),
+      );
     }
 
     function showTypingNotification(chatDisplay) {
@@ -2732,13 +3408,27 @@ if (isCollapsed) {
             result.settings || {},
           );
 
-          // Issue #1 — optionally start a fresh chat for each Google search.
-          let activeThread;
-          if (settings.newChatPerSearch) {
-            const threads = result.threads.map((t) => ({
-              ...t,
-              isActive: "no",
-            }));
+          // =================================================================
+          // Issue #1 — resolve which chat a Google search routes into.
+          // Precedence:   pinned chat  >  new-chat-per-search  >  current/most-recent
+          // and never spawn a chat when auto-send is OFF (manual mode).
+          // Restoring the target from persisted storage (threads[].isActive +
+          // settings.pinnedThreadId) is what makes a FRESH TAB reuse the
+          // existing chat instead of always creating a new one.
+          // =================================================================
+          let threads = result.threads.slice();
+
+          // A pinned chat always wins — but only if it still exists.
+          const pinned = settings.pinnedThreadId
+            ? threads.find((t) => t.id === settings.pinnedThreadId)
+            : null;
+
+          let activeThread = null;
+          if (pinned) {
+            activeThread = pinned;
+          } else if (settings.autoSendSearch && settings.newChatPerSearch) {
+            // Fresh chat per search — only in auto-send mode (manual mode must
+            // never implicitly spawn a chat).
             activeThread = {
               id: "thread_" + Date.now(),
               name: `Search: ${inputText.slice(0, 40)}`,
@@ -2746,15 +3436,51 @@ if (isCollapsed) {
               isActive: "yes",
               messages: [],
             };
-            threads.push(activeThread);
-            await new Promise((resolve) =>
-              chrome.storage.local.set({ threads: threads }, resolve),
-            );
-            renderThreads(false);
+            threads = threads
+              .map((t) => ({ ...t, isActive: "no" }))
+              .concat(activeThread);
           } else {
-            activeThread = result.threads.find((t) => t.isActive === "yes");
+            // Reuse the current chat; fall back to the most-recent thread so a
+            // fresh tab (no in-memory "current chat") still reuses an existing
+            // chat rather than starting a new one.
+            activeThread =
+              threads.find((t) => t.isActive === "yes") ||
+              [...threads].sort((a, b) => (b.created || 0) - (a.created || 0))[0] ||
+              null;
           }
-          if (!activeThread) return;
+
+          // Nothing to reuse yet (empty storage) — create the first chat so the
+          // very first search still has somewhere to land.
+          if (!activeThread) {
+            activeThread = {
+              id: "thread_" + Date.now(),
+              name: settings.newChatPerSearch
+                ? `Search: ${inputText.slice(0, 40)}`
+                : "Thread 1",
+              created: Date.now(),
+              isActive: "yes",
+              messages: [],
+            };
+            threads = threads
+              .map((t) => ({ ...t, isActive: "no" }))
+              .concat(activeThread);
+          }
+
+          // Make the resolved chat the current/active one and persist so the
+          // choice survives reloads and new tabs.
+          threads = threads.map((t) => ({
+            ...t,
+            isActive: t.id === activeThread.id ? "yes" : "no",
+          }));
+          await new Promise((resolve) =>
+            chrome.storage.local.set({ threads: threads }, resolve),
+          );
+          renderThreads(false);
+          renderChatMessages(activeThread.id, false);
+
+          // Manual mode — prepare the sidebar/target chat but DO NOT submit.
+          // The query stays in the input so it can be edited and sent by hand.
+          if (!settings.autoSendSearch) return;
 
           const recentUserMessages = chats
             .slice(-5)
@@ -2777,6 +3503,7 @@ if (isCollapsed) {
             };
             chats.push(userMessage);
             customAIInput.value = "";
+            syncInputUi();
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
                 renderChatMessages(activeThread.id, false); // No animation on new message
@@ -2819,13 +3546,15 @@ if (isCollapsed) {
             }
           } else {
             customAIInput.value = "";
+            syncInputUi();
           }
         },
       );
     }
 
     customAIInput.addEventListener("keydown", async function (event) {
-      if (event.key === "Enter") {
+      // Part 3 — Enter sends; Shift+Enter inserts a newline (default behaviour).
+      if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         const inputText = customAIInput.value.trim();
         if (!inputText) return;
@@ -2850,6 +3579,7 @@ if (isCollapsed) {
             };
             chats.push(userMessage);
             customAIInput.value = "";
+            syncInputUi();
             await new Promise((resolve) => {
               chrome.storage.local.set({ chats: chats }, () => {
                 renderChatMessages(activeThread.id, false); // No animation on new message
@@ -2957,7 +3687,7 @@ if (isCollapsed) {
         throw new Error(`API error: ${res.status} ${res.statusText}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      return data.response || "Keine Antwort erhalten.";
+      return data.response || "No response received.";
     } catch (error) {
       console.error("API Error:", error);
       return `Error: ${error.message}`;
@@ -2996,7 +3726,7 @@ function waitForElements(selectors, callback, interval = 200, timeout = 10000) {
     } else if (Date.now() - start < timeout) {
       setTimeout(check, interval);
     } else {
-      console.warn("Timeout: Nicht alle Elemente wurden gefunden:", selectors);
+      console.warn("Timeout: not all elements were found:", selectors);
     }
   };
 
@@ -3015,7 +3745,7 @@ waitForElements(
     "[jsname='uLislf']"
   ],
   () => {
-    console.log("Alle Ziel-Elemente gefunden – Anpassungen werden ausgeführt.");
+    console.log("All target elements found – applying adjustments.");
 
     document.querySelector(".OZ9ddf").style.display = "block";
 
